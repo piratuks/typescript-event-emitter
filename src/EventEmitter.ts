@@ -89,9 +89,17 @@ export class EventEmitter  {
               await listener(...args);
           }
       } catch (error) {
-          console.error(`Error in listener for event ${eventName}:`, error);
+        this.handleListenerError(eventName, listener, error);
       }
   }
+  }
+
+  private handleListenerError(
+    eventName: string,
+    _listener: ThrottledListener | AsyncListener,
+    error: any
+  ): void {
+    console.error(`Error in listener for event ${eventName}:`, error);
   }
 
   private parseEvent(event: string): [string, string] {

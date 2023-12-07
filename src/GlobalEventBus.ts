@@ -27,7 +27,15 @@ class GlobalEventBus {
     }
   
     async emit(event: string, ...args: any[]): Promise<void> {
-      await this.emitter.emit(event, ...args);
+      try {
+        await this.emitter.emit(event, ...args);
+      } catch (error) {
+        this.handleEventBusError(event, error);
+      }
+    }
+
+    private handleEventBusError(event: string, error: any): void {
+      console.error(`Error in GlobalEventBus while emitting event ${event}:`, error);
     }
   }
   
