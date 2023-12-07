@@ -31,6 +31,14 @@ Versatile and feature-rich TypeScript library for event management, providing a 
 
 ### Tests and benchmarks
 
+## contributing
+
+Please read our [Contribution Guidelines](CONTRIBUTING.md) before contributing to this project.
+
+## security
+
+Please read our [SECURITY REPORTS](SECURITY.md)
+
 ## license
 
 [MIT](LICENSE)
