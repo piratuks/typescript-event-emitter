@@ -1,0 +1,40 @@
+{
+  "name": "typescrpt-event-emitter",
+  "version": "1.0.0",
+  "description": "Versatile TypeScript library for event management, providing features like namespace organization, wildcard listeners, filtering, throttling, and prioritization, making it suitable for a wide range of scenarios with clear documentation for ease of use",
+  "author": "Evaldas Laureckas",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "/dist"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "keywords": [
+    "EventEmitter",
+    "Events",
+    "addEventListener",
+    "addListener",
+    "emit",
+    "emits",
+    "emitter",
+    "event",
+    "once",
+    "subscribe",
+    "Typescrpt EventEmitter",
+    "Typescrpt Events Management"
+  ],
+  "bugs": {
+    "url": "https://github.com/piratuks/typescript-event-emitter/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/piratuks/typescript-event-emitter.git"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
