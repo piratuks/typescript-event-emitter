@@ -1,0 +1,22 @@
+# EditorConfig helps developers define and maintain consistent coding styles
+# for different editors and IDEs. For more information, visit http://editorconfig.org
+
+# Top-most EditorConfig file
+root = true
+
+# Unix-style line endings (LF)
+[*]
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# TypeScript and JavaScript files
+[*.ts, *.tsx, *.js, *.jsx]
+indent_style = space
+indent_size = 2
+
+# JSON files
+[*.json]
+indent_style = space
+indent_size = 2

@@ -1,15 +1,14 @@
-import { EventFilter, Listener } from "./Types";
+import { EventFilter, Listener } from './Types';
 
 export interface Option {
-  filter?: EventFilter; 
-  throttle?: number; 
-  debounce?: number; 
+  filter?: EventFilter;
+  throttle?: number;
+  debounce?: number;
   priority?: number;
 }
 
-
 export interface EventListener {
-  listener: Listener; 
+  listener: Listener;
   priority: number;
 }
 
