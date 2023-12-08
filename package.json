@@ -17,17 +17,18 @@
     "publich": "npm publish",
     "test": "mocha --config mocha.config.js",
     "test:watch": "mocha --config mocha.config.js --watch",
-    "build": "tsc"
+    "build": "tsc",
+    "precommit": "npm run lint && npm run format"
   },
   "husky": {
     "hooks": {
-      "pre-commit": "lint-staged"
+      "pre-commit": "npm run precommit"
     }
   },
   "lint-staged": {
     "*.{ts,tsx}": [
       "eslint --fix",
-      "prettier --write"
+      "prettier --write ."
     ]
   },
   "keywords": [

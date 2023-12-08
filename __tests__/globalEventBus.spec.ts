@@ -1,6 +1,5 @@
 import { globalEventBus } from '../src';
-
-const assert = require('assert');
+import assert = require('assert');
 
 describe('GlobalEventBus', function () {
   it('should add a listener and emit an event', function (done) {

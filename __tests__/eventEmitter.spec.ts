@@ -1,6 +1,5 @@
 import { EventEmitter, EventFilter } from '../src';
-
-const chai = require('chai');
+import chai = require('chai');
 interface Message {
   id: number;
   content: string;
@@ -14,7 +13,7 @@ describe('EventEmitter', function () {
     let eventEmitted = false;
     const emitter = new EventEmitter();
 
-    emitter.on('testEvent', (eventname, data) => {
+    emitter.on('testEvent', (_eventname, data) => {
       chai.assert.strictEqual(data, testData);
       eventEmitted = true;
       done();
@@ -255,7 +254,7 @@ describe('EventEmitter', function () {
       return false;
     };
 
-    let receivedNotifications: Message[] = [];
+    const receivedNotifications: Message[] = [];
 
     messagingEventEmitter.on(
       '*',
