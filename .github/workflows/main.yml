@@ -24,9 +24,6 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Install Prettier
-        run: npm install --save-dev prettier
-
       - name: Run ESLint
         run: npm run lint
 
