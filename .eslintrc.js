@@ -1,11 +1,13 @@
 module.exports = {
   parser: '@typescript-eslint/parser',
-  plugins: ['@typescript-eslint'],
+  plugins: ['@typescript-eslint', 'prettier'],
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/eslint-recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:prettier/recommended'
   ],
-  rules: {}
+  rules: {
+    '@typescript-eslint/no-explicit-any': 'off'
+  }
 };
