@@ -12,9 +12,9 @@ export class EventEmitter {
 
     const throttledListener =
       throttle !== undefined
-        ? this.throttle(listener, throttle)
+        ? this.throttle(listener, throttle, eventName)
         : debounce !== undefined
-          ? this.debounce(listener, debounce)
+          ? this.debounce(listener, debounce, eventName)
           : listener;
 
     const listenerObject = { listener: throttledListener, priority: priority ?? 0 };
@@ -77,8 +77,10 @@ export class EventEmitter {
     eventName: string,
     args: any[]
   ): Promise<void> {
-    const specificListeners = this.eventNamespaces[namespace]?.[checkEventName]?.listeners || [];
-    await this.executeListeners(specificListeners, eventName, args);
+    const specificListeners = this.eventNamespaces[namespace]?.[checkEventName]?.listeners ?? [];
+    const isThrottled = this.eventNamespaces[namespace]?.[checkEventName]?.throttled ?? false;
+
+    await this.executeListeners(specificListeners, isThrottled, eventName, args);
   }
 
   private insertSorted(
@@ -98,13 +100,14 @@ export class EventEmitter {
   }
 
   private async executeListeners(
-    listeners: { listener: ThrottledListener | AsyncListener; throttled?: boolean }[],
+    listeners: { listener: ThrottledListener | AsyncListener }[],
+    isThrottled: boolean,
     eventName: string,
     args: any[]
   ): Promise<void> {
-    for (const { listener, throttled } of listeners) {
+    for (const { listener } of listeners) {
       try {
-        if (throttled) {
+        if (isThrottled) {
           await (listener as ThrottledListener)(eventName, ...args);
         } else {
           await (listener as AsyncListener)(eventName, ...args);
@@ -127,25 +130,25 @@ export class EventEmitter {
     return [namespace, eventName];
   }
 
-  private throttle(fn: Listener | AsyncListener, delay: number): ThrottledListener | AsyncListener {
+  private throttle(fn: Listener | AsyncListener, delay: number, eventName: string): ThrottledListener | AsyncListener {
     let lastCallTime = 0;
 
     return async function (...args: any[]): Promise<void> {
       const now = Date.now();
       if (now - lastCallTime >= delay) {
         lastCallTime = now;
-        await (fn as AsyncListener)(...args);
+        await (fn as AsyncListener)(eventName, ...args);
       }
     };
   }
 
-  private debounce(fn: Listener | AsyncListener, delay: number): ThrottledListener | AsyncListener {
+  private debounce(fn: Listener | AsyncListener, delay: number, eventName: string): ThrottledListener | AsyncListener {
     let timeout: NodeJS.Timeout;
 
     return async function (...args: any[]): Promise<void> {
       clearTimeout(timeout);
       timeout = setTimeout(async () => {
-        await (fn as AsyncListener)(...args);
+        await (fn as AsyncListener)(eventName, ...args);
       }, delay);
     };
   }
