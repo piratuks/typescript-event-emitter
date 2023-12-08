@@ -36,6 +36,7 @@ class GlobalEventBus {
 
   private handleEventBusError(event: string, error: any): void {
     console.error(`Error in GlobalEventBus while emitting event ${event}:`, error);
+    console.error(error.stack);
   }
 }
 
