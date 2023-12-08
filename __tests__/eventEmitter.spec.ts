@@ -1,6 +1,12 @@
-import { EventEmitter } from '../src';
+import { EventEmitter, EventFilter } from '../src';
 
 const chai = require('chai');
+interface Message {
+  id: number;
+  content: string;
+  messageType: string;
+  sender: string;
+}
 
 describe('EventEmitter', function () {
   it('should add a listener and emit an event', function (done) {
@@ -8,7 +14,7 @@ describe('EventEmitter', function () {
     let eventEmitted = false;
     const emitter = new EventEmitter();
 
-    emitter.on('testEvent', data => {
+    emitter.on('testEvent', (eventname, data) => {
       chai.assert.strictEqual(data, testData);
       eventEmitted = true;
       done();
@@ -182,51 +188,6 @@ describe('EventEmitter', function () {
     chai.assert.isTrue(secondListenerInvoked);
   });
 
-  it('should filter events based on the provided filter function', function (done) {
-    let filteredEventInvoked = false;
-    const emitter = new EventEmitter();
-
-    // const importantFilter = (eventName: string) => eventName.startsWith('important');
-    // emitter.on('namespace.event', arg => console.log(`Event emitted: ${arg}`), { filter: importantFilter });
-    // // Emit events
-    // emitter.emit('namespace.event', 'some argument'); // This won't trigger the listener because the filter rejects it
-    // emitter.emit('namespace.important', 'important event'); // This triggers the listener because it passes the filter
-
-    const filter = (eventName: string): boolean => eventName.startsWith('filter');
-    emitter.on('namespace.event1', data => console.log('Filtered Event 1:', data), { filter });
-    emitter.on('namespace.event2', data => console.log('Filtered Event 2:', data), { filter });
-
-    emitter.emit('namespace.filter', 'Data for Event 1');
-
-    // const filter = (eventName: string): boolean => eventName.startsWith('filter');
-    // emitter.on('namespace.event1', data => console.log('Filtered Event 1:', data), { filter });
-    // // emitter.on('namespace.event2', data => console.log('Filtered Event 2:', data), { filter });
-    // // emitter.on('namespace.filterSomething', data => console.log('sssssssssssss', data));
-
-    // emitter.emit('namespace.event1', 'Data for Event 1');
-    // emitter.emit('namespace.event2', 'Data for Event 2');
-    // emitter.emit('namespace.otherEvent', 'Data for Other Event');
-    // emitter.emit('namespace.filterSomething', 'Data for Event 1');
-
-    // emitter.on(
-    //   'filteredEvent',
-    //   () => {
-    //     filteredEventInvoked = true;
-    //   },
-    //   {
-    //     filter: (eventName: string) => eventName === 'filteredEvent'
-    //   }
-    // );
-
-    // emitter.emit('unrelatedEvent');
-    done();
-
-    // setTimeout(() => {
-    //   chai.assert.strictEqual(filteredEventInvoked, false);
-    //
-    // }, 50);
-  });
-
   it('should debounce the listener', async function () {
     const execute = async (): Promise<void> => {
       await Promise.all([emitter.emit('debounceEvent'), emitter.emit('debounceEvent'), emitter.emit('debounceEvent')]);
@@ -276,6 +237,56 @@ describe('EventEmitter', function () {
 
     chai.assert.strictEqual(callCount, 1);
   });
-});
 
-// Event Filtering:
+  it('should filter events based on the provided filter function', async function () {
+    const messagingEventEmitter = new EventEmitter();
+    const currentUser = { username: 'example_user' };
+    const notificationFilter: EventFilter = (eventName, namespace) => {
+      if (namespace === 'dm') {
+        return true;
+      }
+      if (eventName === 'notification') {
+        return true;
+      }
+      if (namespace === 'mention' && currentUser.username === eventName) {
+        return true;
+      }
+
+      return false;
+    };
+
+    let receivedNotifications: Message[] = [];
+
+    messagingEventEmitter.on(
+      '*',
+      (_event, message: Message) => {
+        receivedNotifications.push(message);
+      },
+      { filter: notificationFilter }
+    );
+    const directMessage: Message = { id: 1, content: 'Hello!', messageType: 'dm', sender: 'user123' };
+    const generalNotification: Message = {
+      id: 2,
+      content: 'General update',
+      messageType: 'announcement',
+      sender: 'system'
+    };
+    const mentionNotification: Message = {
+      id: 3,
+      content: 'You were mentioned!',
+      messageType: 'mention',
+      sender: 'other_user'
+    };
+    const unrelatedEvent: Message = { id: 4, content: 'Irrelevant event', messageType: 'other', sender: 'unknown' };
+
+    await Promise.all([
+      messagingEventEmitter.emit('other.event', unrelatedEvent),
+      messagingEventEmitter.emit('notification', generalNotification),
+      messagingEventEmitter.emit('dm.newMessage', directMessage),
+      messagingEventEmitter.emit('mention.example_user', mentionNotification)
+    ]);
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    chai.assert.equal(receivedNotifications.length, 3);
+  });
+});

@@ -3,11 +3,11 @@ import { globalEventBus } from '../src';
 const assert = require('assert');
 
 describe('GlobalEventBus', function () {
-  xit('should add a listener and emit an event', function (done) {
+  it('should add a listener and emit an event', function (done) {
     const testData = 'Test data';
     let eventEmitted = false;
 
-    globalEventBus.on('testEvent', data => {
+    globalEventBus.on('testEvent', (_eventName, data) => {
       assert.strictEqual(data, testData);
       eventEmitted = true;
       done();
@@ -18,12 +18,12 @@ describe('GlobalEventBus', function () {
         clearTimeout(timeout);
         done(new Error('Timeout: testEvent was not emitted.'));
       }
-    }, 5000);
+    }, 4000);
 
     globalEventBus.emit('testEvent', testData);
   });
 
-  xit('should remove a listener', function (done) {
+  it('should remove a listener', function (done) {
     let listenerInvoked = false;
 
     const removeListener = () => {

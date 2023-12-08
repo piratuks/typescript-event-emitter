@@ -2,9 +2,10 @@ import { EventNamespace, Option } from './Interfaces';
 import { AsyncListener, EventFilter, Listener, ThrottledListener } from './Types';
 
 export class EventEmitter {
-  private wildcardListeners: { listener: ThrottledListener | AsyncListener; throttled?: boolean }[] = [];
   private eventNamespaces: Record<string, EventNamespace> = {};
   private eventFilters: EventFilter[] = [];
+  private readonly wildCard = '*';
+  private readonly wildCardNamespace = '';
 
   on(event: string, listener: Listener | AsyncListener, { filter, throttle, debounce, priority }: Option = {}): void {
     const [namespace, eventName] = this.parseEvent(event);
@@ -16,21 +17,17 @@ export class EventEmitter {
           ? this.debounce(listener, debounce)
           : listener;
 
-    const listenerObject = { listener: throttledListener, priority: priority || 0 };
-    if (!namespace && eventName === '*') {
-      this.wildcardListeners.push({ listener: throttledListener, throttled: throttle !== undefined });
-    } else {
-      if (!this.eventNamespaces[namespace]) {
-        this.eventNamespaces[namespace] = {};
-      }
-      if (!this.eventNamespaces[namespace][eventName]) {
-        this.eventNamespaces[namespace][eventName] = { listeners: [] };
-      }
+    const listenerObject = { listener: throttledListener, priority: priority ?? 0 };
 
-      this.eventNamespaces[namespace][eventName].listeners.push(listenerObject);
-      this.eventNamespaces[namespace][eventName].listeners.sort((a, b) => b.priority - a.priority);
-      this.eventNamespaces[namespace][eventName].throttled = throttle !== undefined;
+    if (!this.eventNamespaces[namespace]) {
+      this.eventNamespaces[namespace] = {};
     }
+    if (!this.eventNamespaces[namespace][eventName]) {
+      this.eventNamespaces[namespace][eventName] = { listeners: [] };
+    }
+
+    this.insertSorted(this.eventNamespaces[namespace][eventName].listeners, listenerObject);
+    this.eventNamespaces[namespace][eventName].throttled = throttle !== undefined;
 
     if (filter) {
       this.eventFilters.push(filter);
@@ -40,34 +37,64 @@ export class EventEmitter {
   off(event: string, listener: Listener | AsyncListener): void {
     const [namespace, eventName] = this.parseEvent(event);
 
-    if (!namespace && eventName === '*') {
-      this.wildcardListeners = this.wildcardListeners.filter(l => l.listener !== listener);
-    } else if (this.eventNamespaces[namespace] && this.eventNamespaces[namespace][eventName]) {
-      this.eventNamespaces[namespace][eventName].listeners = this.eventNamespaces[namespace][
-        eventName
-      ].listeners.filter(l => l.listener !== listener);
+    const namespaceObject = this.eventNamespaces[namespace];
+    if (namespaceObject && namespaceObject[eventName]) {
+      const listeners = namespaceObject[eventName].listeners;
+      const index = listeners.findIndex(l => l.listener === listener);
+
+      if (index !== -1) {
+        listeners.splice(index, 1);
+
+        if (!listeners.length) {
+          delete namespaceObject[eventName];
+        }
+
+        if (this.isObjectEmpty(namespaceObject)) {
+          delete this.eventNamespaces[namespace];
+        }
+      }
     }
   }
 
   async emit(event: string, ...args: any[]): Promise<void> {
     const [namespace, eventName] = this.parseEvent(event);
 
-    const shouldEmit = this.eventFilters.length === 0 || this.eventFilters.some(filter => filter(eventName));
+    const shouldEmit = this.eventFilters.length === 0 || this.eventFilters.some(filter => filter(eventName, namespace));
     if (shouldEmit) {
-      this.wildcardListeners.sort((a, b) => (b.throttled ? 1 : 0) - (a.throttled ? 1 : 0));
-      await this.executeListeners(this.wildcardListeners, eventName, args);
-
-      if (this.eventNamespaces[namespace]) {
-        if (this.eventNamespaces[namespace][eventName]) {
-          this.eventNamespaces[namespace][eventName].listeners.sort((a, b) => b.priority - a.priority);
-          await this.executeListeners(this.eventNamespaces[namespace][eventName].listeners, eventName, args);
-        }
-        if (this.eventNamespaces[namespace]['*']) {
-          this.eventNamespaces[namespace]['*'].listeners.sort((a, b) => b.priority - a.priority);
-          await this.executeListeners(this.eventNamespaces[namespace]['*'].listeners, '*', args);
-        }
-      }
+      await Promise.all([
+        this.executeSpecificListeners(this.wildCardNamespace, this.wildCard, eventName, args),
+        this.wildCardNamespace !== namespace &&
+          this.executeSpecificListeners(namespace, this.wildCard, eventName, args),
+        this.executeSpecificListeners(this.wildCard, eventName, eventName, args),
+        this.executeSpecificListeners(namespace, eventName, eventName, args)
+      ]);
     }
+  }
+
+  private async executeSpecificListeners(
+    namespace: string,
+    checkEventName: string,
+    eventName: string,
+    args: any[]
+  ): Promise<void> {
+    const specificListeners = this.eventNamespaces[namespace]?.[checkEventName]?.listeners || [];
+    await this.executeListeners(specificListeners, eventName, args);
+  }
+
+  private insertSorted(
+    listeners: { listener: ThrottledListener | AsyncListener; priority: number }[],
+    listenerObject: { listener: ThrottledListener | AsyncListener; priority: number }
+  ): void {
+    const index = listeners.findIndex(l => listenerObject.priority > l.priority);
+    if (index === -1) {
+      listeners.push(listenerObject);
+    } else {
+      listeners.splice(index, 0, listenerObject);
+    }
+  }
+
+  private isObjectEmpty(obj: object): boolean {
+    return Object.keys(obj).length === 0;
   }
 
   private async executeListeners(
@@ -80,7 +107,7 @@ export class EventEmitter {
         if (throttled) {
           await (listener as ThrottledListener)(eventName, ...args);
         } else {
-          await (listener as AsyncListener)(...args);
+          await (listener as AsyncListener)(eventName, ...args);
         }
       } catch (error) {
         this.handleListenerError(eventName, listener, error);
