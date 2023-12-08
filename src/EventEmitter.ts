@@ -17,8 +17,7 @@ export class EventEmitter {
           : listener;
 
     const listenerObject = { listener: throttledListener, priority: priority || 0 };
-
-    if (namespace === '*') {
+    if (!namespace && eventName === '*') {
       this.wildcardListeners.push({ listener: throttledListener, throttled: throttle !== undefined });
     } else {
       if (!this.eventNamespaces[namespace]) {
@@ -41,7 +40,7 @@ export class EventEmitter {
   off(event: string, listener: Listener | AsyncListener): void {
     const [namespace, eventName] = this.parseEvent(event);
 
-    if (namespace === '*') {
+    if (!namespace && eventName === '*') {
       this.wildcardListeners = this.wildcardListeners.filter(l => l.listener !== listener);
     } else if (this.eventNamespaces[namespace] && this.eventNamespaces[namespace][eventName]) {
       this.eventNamespaces[namespace][eventName].listeners = this.eventNamespaces[namespace][
@@ -54,14 +53,19 @@ export class EventEmitter {
     const [namespace, eventName] = this.parseEvent(event);
 
     const shouldEmit = this.eventFilters.length === 0 || this.eventFilters.some(filter => filter(eventName));
-
     if (shouldEmit) {
       this.wildcardListeners.sort((a, b) => (b.throttled ? 1 : 0) - (a.throttled ? 1 : 0));
       await this.executeListeners(this.wildcardListeners, eventName, args);
 
-      if (this.eventNamespaces[namespace] && this.eventNamespaces[namespace][eventName]) {
-        this.eventNamespaces[namespace][eventName].listeners.sort((a, b) => b.priority - a.priority);
-        await this.executeListeners(this.eventNamespaces[namespace][eventName].listeners, eventName, args);
+      if (this.eventNamespaces[namespace]) {
+        if (this.eventNamespaces[namespace][eventName]) {
+          this.eventNamespaces[namespace][eventName].listeners.sort((a, b) => b.priority - a.priority);
+          await this.executeListeners(this.eventNamespaces[namespace][eventName].listeners, eventName, args);
+        }
+        if (this.eventNamespaces[namespace]['*']) {
+          this.eventNamespaces[namespace]['*'].listeners.sort((a, b) => b.priority - a.priority);
+          await this.executeListeners(this.eventNamespaces[namespace]['*'].listeners, '*', args);
+        }
       }
     }
   }
@@ -86,6 +90,7 @@ export class EventEmitter {
 
   private handleListenerError(eventName: string, _listener: ThrottledListener | AsyncListener, error: any): void {
     console.error(`Error in listener for event ${eventName}:`, error);
+    console.error(error.stack);
   }
 
   private parseEvent(event: string): [string, string] {
@@ -108,7 +113,7 @@ export class EventEmitter {
   }
 
   private debounce(fn: Listener | AsyncListener, delay: number): ThrottledListener | AsyncListener {
-    let timeout: number;
+    let timeout: NodeJS.Timeout;
 
     return async function (...args: any[]): Promise<void> {
       clearTimeout(timeout);

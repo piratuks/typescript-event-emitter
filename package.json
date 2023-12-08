@@ -15,7 +15,8 @@
     "pack": "npm pack",
     "login": "npm login",
     "publich": "npm publish",
-    "test": "",
+    "test": "mocha --config mocha.config.js",
+    "test:watch": "mocha --config mocha.config.js --watch",
     "build": "tsc"
   },
   "husky": {
@@ -52,14 +53,19 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
     "@typescript-eslint/eslint-plugin": "^6.13.2",
     "@typescript-eslint/parser": "^6.13.2",
+    "chai": "^4.3.10",
     "eslint": "^8.55.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.0.1",
     "husky": "^8.0.3",
     "lint-staged": "^15.2.0",
+    "mocha": "^10.2.0",
     "prettier": "^3.1.0",
+    "ts-node": "^10.9.1",
     "typescript": "^5.3.3"
   }
 }
