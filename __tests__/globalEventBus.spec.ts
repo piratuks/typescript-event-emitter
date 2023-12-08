@@ -28,7 +28,7 @@ describe('GlobalEventBus', function () {
     const removeListener = () => {
       listenerInvoked = true;
     };
-    console.log('');
+
     globalEventBus.on('removeListenerEvent', removeListener);
     globalEventBus.off('removeListenerEvent', removeListener);
     globalEventBus.emit('removeListenerEvent');
