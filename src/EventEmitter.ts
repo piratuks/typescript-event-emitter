@@ -78,9 +78,9 @@ export class EventEmitter {
     for (const { listener, throttled } of listeners) {
       try {
         if (throttled) {
-          await listener(eventName, ...args);
+          await (listener as ThrottledListener)(eventName, ...args);
         } else {
-          await listener(...args);
+          await (listener as AsyncListener)(...args);
         }
       } catch (error) {
         this.handleListenerError(eventName, listener, error);
@@ -106,8 +106,8 @@ export class EventEmitter {
     return async function (...args: any[]): Promise<void> {
       const now = Date.now();
       if (now - lastCallTime >= delay) {
-        await (fn as AsyncListener)(...args);
         lastCallTime = now;
+        await (fn as AsyncListener)(...args);
       }
     };
   }

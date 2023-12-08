@@ -16,6 +16,5 @@ export interface EventNamespace {
   [event: string]: {
     listeners: EventListener[];
     throttled?: boolean;
-    debounceTimeout?: number;
   };
 }
