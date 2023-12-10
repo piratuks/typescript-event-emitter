@@ -16,6 +16,7 @@
     "login": "npm login",
     "publich": "npm publish",
     "test": "mocha --config mocha.config.js",
+    "test:nyc": "nyc mocha --config mocha.config.js",
     "test:watch": "mocha --config mocha.config.js --watch",
     "build": "tsc",
     "precommit": "npm run lint && npm run format",
@@ -66,6 +67,7 @@
     "husky": "^8.0.0",
     "lint-staged": "^15.2.0",
     "mocha": "^10.2.0",
+    "nyc": "^15.1.0",
     "prettier": "^3.1.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.3.3"
