@@ -1,14 +1,15 @@
+import { wildCard } from './Constants';
 import { EventNamespace, Option } from './Interfaces';
 import { AsyncListener, EventFilter, Listener, ThrottledListener } from './Types';
+import { insertSorted, isObjectEmpty, parseEvent } from './Utils';
 
 export class EventEmitter {
   private eventNamespaces: Record<string, EventNamespace> = {};
   private eventFilters: EventFilter[] = [];
-  private readonly wildCard = '*';
   private readonly wildCardNamespace = '';
 
   on(event: string, listener: Listener | AsyncListener, { filter, throttle, debounce, priority }: Option = {}): void {
-    const [namespace, eventName] = this.parseEvent(event);
+    const [namespace, eventName] = parseEvent(event);
 
     const throttledListener =
       throttle !== undefined
@@ -26,7 +27,7 @@ export class EventEmitter {
       this.eventNamespaces[namespace][eventName] = { listeners: [] };
     }
 
-    this.insertSorted(this.eventNamespaces[namespace][eventName].listeners, listenerObject);
+    insertSorted(this.eventNamespaces[namespace][eventName].listeners, listenerObject);
     this.eventNamespaces[namespace][eventName].throttled = throttle !== undefined;
 
     if (filter) {
@@ -35,7 +36,7 @@ export class EventEmitter {
   }
 
   off(event: string, listener: Listener | AsyncListener): void {
-    const [namespace, eventName] = this.parseEvent(event);
+    const [namespace, eventName] = parseEvent(event);
 
     const namespaceObject = this.eventNamespaces[namespace];
     if (namespaceObject && namespaceObject[eventName]) {
@@ -49,7 +50,7 @@ export class EventEmitter {
           delete namespaceObject[eventName];
         }
 
-        if (this.isObjectEmpty(namespaceObject)) {
+        if (isObjectEmpty(namespaceObject)) {
           delete this.eventNamespaces[namespace];
         }
       }
@@ -57,15 +58,14 @@ export class EventEmitter {
   }
 
   async emit(event: string, ...args: any[]): Promise<void> {
-    const [namespace, eventName] = this.parseEvent(event);
+    const [namespace, eventName] = parseEvent(event);
 
     const shouldEmit = this.eventFilters.length === 0 || this.eventFilters.some(filter => filter(eventName, namespace));
     if (shouldEmit) {
       await Promise.all([
-        this.executeSpecificListeners(this.wildCardNamespace, this.wildCard, eventName, args),
-        this.wildCardNamespace !== namespace &&
-          this.executeSpecificListeners(namespace, this.wildCard, eventName, args),
-        this.executeSpecificListeners(this.wildCard, eventName, eventName, args),
+        this.executeSpecificListeners(this.wildCardNamespace, wildCard, eventName, args),
+        this.wildCardNamespace !== namespace && this.executeSpecificListeners(namespace, wildCard, eventName, args),
+        this.executeSpecificListeners(wildCard, eventName, eventName, args),
         this.executeSpecificListeners(namespace, eventName, eventName, args)
       ]);
     }
@@ -81,22 +81,6 @@ export class EventEmitter {
     const isThrottled = this.eventNamespaces[namespace]?.[checkEventName]?.throttled ?? false;
 
     await this.executeListeners(specificListeners, isThrottled, eventName, args);
-  }
-
-  private insertSorted(
-    listeners: { listener: ThrottledListener | AsyncListener; priority: number }[],
-    listenerObject: { listener: ThrottledListener | AsyncListener; priority: number }
-  ): void {
-    const index = listeners.findIndex(l => listenerObject.priority > l.priority);
-    if (index === -1) {
-      listeners.push(listenerObject);
-    } else {
-      listeners.splice(index, 0, listenerObject);
-    }
-  }
-
-  private isObjectEmpty(obj: object): boolean {
-    return Object.keys(obj).length === 0;
   }
 
   private async executeListeners(
@@ -121,13 +105,6 @@ export class EventEmitter {
   private handleListenerError(eventName: string, _listener: ThrottledListener | AsyncListener, error: any): void {
     console.error(`Error in listener for event ${eventName}:`, error);
     console.error(error.stack);
-  }
-
-  private parseEvent(event: string): [string, string] {
-    const parts = event.split('.');
-    const namespace = parts.length > 1 ? parts[0] : '';
-    const eventName = parts[parts.length - 1];
-    return [namespace, eventName];
   }
 
   private throttle(fn: Listener | AsyncListener, delay: number, eventName: string): ThrottledListener | AsyncListener {

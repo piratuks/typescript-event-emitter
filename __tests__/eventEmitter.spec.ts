@@ -59,19 +59,19 @@ describe('EventEmitter', function () {
       () => {
         result.push('Medium Priority Listener');
       },
-      { priority: 1 }
+      { priority: 2 }
     );
     emitter.on(
       'priorityEvent',
       () => {
         result.push('High Priority Listener');
       },
-      { priority: 2 }
+      { priority: 1 }
     );
 
     await emitter.emit('priorityEvent');
 
-    chai.assert.deepEqual(result, ['High Priority Listener', 'Medium Priority Listener', 'Low Priority Listener']);
+    chai.assert.deepEqual(result, ['Medium Priority Listener', 'High Priority Listener', 'Low Priority Listener']);
   });
 
   it('should execute wildcard listeners for everything', async function () {
