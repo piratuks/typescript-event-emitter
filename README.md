@@ -23,13 +23,67 @@ Versatile and feature-rich TypeScript library for event management, providing a 
 
 ## installation
 
-## CDN
+```bash
+$ npm install --save typescrpt-event-emitter
+```
 
 ## usage
 
-### ....
+After installation the only thing you need to do is require the module:
+
+```bash
+import { EventEmitter } from 'typescrpt-event-emitter';
+```
+
+or
+
+```bash
+var EventEmitter = require('typescrpt-event-emitter');
+```
+
+And you're ready to create your own EventEmitter instances.
+
+### Base
+
+```bash
+  const emitter = new EventEmitter();
+  let context = { test: 'Some metada' }
+
+  const onEventNameEmitted = (eventname:string, data:any) => {
+      console.log(data === context) // true
+  };
+
+  emitter.on('event-name', onEventNameEmitted);
+  emitter.off('event-name', onEventNameEmitted); // removes listener
+```
+
+### Throttling
+
+### Debouncing
+
+### Wildcard
+
+### Namespace
+
+### Priority Queue
+
+### Event Filtering
+
+### Async/Await Pattern
+
+### Error Handling
+
+### Global Event Bus
 
 ### Tests and benchmarks
+
+This module is well tested. You can run:
+
+`npm test` to run the tests under Node.js.
+`test:nyc` to run the tests under Node.js and get the coverage
+
+Tests and benchmarks are not included in the npm package. If you want to play
+with them you have to clone the GitHub repository. Note that you will have to run an additional `npm i` in the benchmarks folder before `npm run benchmark`.
 
 ## contributing
 
@@ -42,3 +96,7 @@ Please read our [SECURITY REPORTS](SECURITY.md)
 ## license
 
 [MIT](LICENSE)
+
+```
+
+```

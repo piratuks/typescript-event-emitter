@@ -2,3 +2,4 @@ node_modules/
 dist/
 TODO.txt
 .nyc_output
+*.tgz
