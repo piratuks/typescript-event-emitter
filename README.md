@@ -24,6 +24,9 @@ Versatile and feature-rich TypeScript library for event management, providing a 
     - the integration with a global event bus enhances the modularity and usability of the event system.
 8.  Error Handling:
     - logging errors to the console.
+9.  Custom separator per listener and Global configs:
+    - ability to set custom separator per listener which would override global separator dedicated for listeners.
+    - ability to change global separator which is used for listeners where separator is not provided
 
 ## installation
 
@@ -78,16 +81,18 @@ And you're ready to create your own EventEmitter instances.
 ### Throttling
 
 1. First emit:
-    - The 'throttleEvent' is emitted.
-    - The throttled listener is executed immediately, and callCount becomes 1.
+
+   - The 'throttleEvent' is emitted.
+   - The throttled listener is executed immediately, and callCount becomes 1.
 
 2. Second emit (within the 100-millisecond throttle delay):
-    - The 'throttleEvent' is emitted again.
-    - This emit is ignored because throttling prevents the listener from being executed within the 100-millisecond throttle period.
+
+   - The 'throttleEvent' is emitted again.
+   - This emit is ignored because throttling prevents the listener from being executed within the 100-millisecond throttle period.
 
 3. Third emit (within the 100-millisecond throttle delay):
-    - The 'throttleEvent' is emitted once more.
-    - This emit is also ignored due to throttling.
+   - The 'throttleEvent' is emitted once more.
+   - This emit is also ignored due to throttling.
 
 ```bash
   const emitter = new EventEmitter();
@@ -107,17 +112,19 @@ And you're ready to create your own EventEmitter instances.
 ### Debouncing
 
 1. First emit:
-    - The 'debounceEvent' is emitted.
-    - The debounced listener is called but not immediately executed due to the debounce delay.
-    - The debounced function is scheduled to be executed after 100 milliseconds.
+
+   - The 'debounceEvent' is emitted.
+   - The debounced listener is called but not immediately executed due to the debounce delay.
+   - The debounced function is scheduled to be executed after 100 milliseconds.
 
 2. Second emit (within the debounce delay):
-    - The 'debounceEvent' is emitted.
-    - The debounced listener is called again, but the previous scheduled execution is canceled, and a new one is scheduled for 100 milliseconds from the latest emit.
+
+   - The 'debounceEvent' is emitted.
+   - The debounced listener is called again, but the previous scheduled execution is canceled, and a new one is scheduled for 100 milliseconds from the latest emit.
 
 3. Third emit (within the debounce delay):
-    - The 'debounceEvent' is emitted.
-    - The debounced listener is called once more, canceling the previous scheduled execution again and scheduling a new one for 100 milliseconds from this emit.
+   - The 'debounceEvent' is emitted.
+   - The debounced listener is called once more, canceling the previous scheduled execution again and scheduling a new one for 100 milliseconds from this emit.
 
 So basically for the given example, the listener will be executed after 300 millisecond delay
 
@@ -351,6 +358,38 @@ const { globalEventBus } = require('typescript-event-emitter');
   globalEventBus.on('event-name', onEventNameEmitted);  // adds listener
   globalEventBus.emit('event-name', context); // emits listener
 
+```
+
+### Custom separator per listener and Global configs ///////////
+
+```bash
+  const eventEmitter: EventEmitter = new EventEmitter({ separator: ':' }); // setting global separator if not provided it will revert to default "."
+
+  eventEmitter.on("namespace:someEvent", () => {});
+```
+
+```bash
+  const eventEmitter: EventEmitter = new EventEmitter(); // default separator '.'
+  eventEmitter.setGlobalOptions({ separator: "-" }); // sets global separator which can be provided via constructor aswell
+
+  eventEmitter.on("namespace-someEvent", () => {});
+  eventEmitter.off("namespace-someEvent");
+
+  eventEmitter.on("namespace:someEvent1", () => {}, { separator: ":" }); // listener separator will be ':'
+  eventEmitter.off("namespace:someEvent1");
+
+  eventEmitter.on("namespace:someEvent2", () => {}, { separator: ":" }); // listener separator will be ':'
+  eventEmitter.on("namespace-someEvent3", () => {}); // listener separator will be '-' as it was set via setGlobalOptions
+
+  eventEmitter.off("namespace:someEvent2");
+  eventEmitter.off("namespace-someEvent3");
+```
+
+```bash
+  const eventEmitter: EventEmitter = new EventEmitter({ separator: ':' }); // setting global separator if not provided it will revert to default "."
+
+  globalEventBus.setGlobalOptions({ separator: "-" }); // sets global separator
+  globalEventBus.on("namespace:someEvent", () => {}, { separator: ":" });  // listener separator will be ':'
 ```
 
 ### Tests and benchmarks

@@ -1,2 +1,2 @@
-export const separator = '.';
-export const wildCard = '*';
+export const defaultSeparator = '.';
+export const defaultWildCard = '*';

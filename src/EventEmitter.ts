@@ -1,12 +1,30 @@
-import { wildCard } from './Constants';
-import { EventNamespace, Option } from './Interfaces';
+import { defaultSeparator, defaultWildCard } from './Constants';
+import { EventNamespace, GlobalOption, Option } from './Interfaces';
 import { AsyncListener, EventFilter, Listener, ThrottledListener } from './Types';
-import { insertSorted, isObjectEmpty, parseEvent } from './Utils';
+import { findEventInfo, getPrioritizedValue, insertSorted, isObjectEmpty, parseEvent } from './Utils';
 
 export class EventEmitter {
   private eventNamespaces: Record<string, EventNamespace> = {};
   private eventFilters: EventFilter[] = [];
   private readonly wildCardNamespace = '';
+  private globalOption: GlobalOption;
+
+  /**
+   * Creates an instance of EventEmitter.
+   * @param globalOption - Global options for the class.
+   * @param globalOption.separator - The separator used across all listeners unless listener contains custom separator.
+   */
+  constructor(globalOption: GlobalOption = { separator: defaultSeparator }) {
+    this.globalOption = { ...globalOption };
+  }
+
+  /**
+   * Sets global options for the EventEmitter.
+   * @param options - Global options, such as the separator.
+   */
+  setGlobalOptions(options: GlobalOption): void {
+    this.globalOption = { ...options };
+  }
 
   /**
    * Adds a listener for the specified event, optionally applying filters, throttling, debouncing, and setting priority.
@@ -17,9 +35,14 @@ export class EventEmitter {
    * @param options.throttle - The time delay (in milliseconds) for throttling the listener's execution.
    * @param options.debounce - The time delay (in milliseconds) for debouncing the listener's execution.
    * @param options.priority - The priority of the listener, higher values execute first (default is 0).
+   * @param options.separator - Separator used for parsing the event (if applicable, default is '.').
    */
-  on(event: string, listener: Listener | AsyncListener, { filter, throttle, debounce, priority }: Option = {}): void {
-    const [namespace, eventName] = parseEvent(event);
+  on(event: string, listener: Listener | AsyncListener, option: Option = {}): void {
+    const { filter, throttle, debounce, priority, separator }: Option = option;
+    const usedSeparator = getPrioritizedValue(this.globalOption.separator, separator);
+    const eventInfo = { separator: usedSeparator, event };
+
+    const [namespace, eventName] = parseEvent(event, usedSeparator);
 
     const throttledListener =
       throttle !== undefined
@@ -28,7 +51,7 @@ export class EventEmitter {
           ? this.debounce(listener, debounce, eventName)
           : listener;
 
-    const listenerObject = { listener: throttledListener, priority: priority ?? 0 };
+    const listenerObject = { listener: throttledListener, priority: priority ?? 0, eventInfo };
 
     if (!this.eventNamespaces[namespace]) {
       this.eventNamespaces[namespace] = {};
@@ -51,7 +74,9 @@ export class EventEmitter {
    * @param listener - The listener function to be removed.
    */
   off(event: string, listener: Listener | AsyncListener): void {
-    const [namespace, eventName] = parseEvent(event);
+    const separator = findEventInfo(event, this.eventNamespaces);
+
+    const [namespace, eventName] = parseEvent(event, separator);
 
     const namespaceObject = this.eventNamespaces[namespace];
     if (namespaceObject && namespaceObject[eventName]) {
@@ -78,16 +103,19 @@ export class EventEmitter {
    * @param args - Additional arguments to be passed to the listeners.
    * @returns A promise that resolves when all listeners have been executed.
    */
-  async emit(event: string, ...args: any[]): Promise<void> {
-    const [namespace, eventName] = parseEvent(event);
+  async emit(event: string, ...args: unknown[]): Promise<void> {
+    const separator = findEventInfo(event, this.eventNamespaces);
+
+    const [namespace, eventName] = parseEvent(event, separator);
 
     const shouldEmit = this.eventFilters.length === 0 || this.eventFilters.some(filter => filter(eventName, namespace));
     if (shouldEmit) {
       await Promise.all([
-        this.executeSpecificListeners(this.wildCardNamespace, wildCard, eventName, args),
-        this.wildCardNamespace !== namespace && this.executeSpecificListeners(namespace, wildCard, eventName, args),
-        this.executeSpecificListeners(wildCard, eventName, eventName, args),
-        this.executeSpecificListeners(namespace, eventName, eventName, args)
+        this.executeSpecificListeners(this.wildCardNamespace, defaultWildCard, eventName, separator, args),
+        this.wildCardNamespace !== namespace &&
+          this.executeSpecificListeners(namespace, defaultWildCard, eventName, separator, args),
+        this.executeSpecificListeners(defaultWildCard, eventName, eventName, separator, args),
+        this.executeSpecificListeners(namespace, eventName, eventName, separator, args)
       ]);
     }
   }
@@ -97,6 +125,7 @@ export class EventEmitter {
    * @param namespace - The namespace for which listeners should be executed.
    * @param checkEventName - The event name or wildcard to check for listeners.
    * @param eventName - The actual event name for emitting.
+   * @param separator - Separator used for parsing the event (if applicable, default is '.').
    * @param args - Additional arguments to be passed to the listeners.
    * @returns A promise that resolves when all specific listeners have been executed.
    */
@@ -104,12 +133,13 @@ export class EventEmitter {
     namespace: string,
     checkEventName: string,
     eventName: string,
-    args: any[]
+    separator: string,
+    args: unknown[]
   ): Promise<void> {
     const specificListeners = this.eventNamespaces[namespace]?.[checkEventName]?.listeners ?? [];
     const isThrottled = this.eventNamespaces[namespace]?.[checkEventName]?.throttled ?? false;
 
-    for (const { listener } of specificListeners) {
+    for (const { listener } of specificListeners.filter(({ eventInfo }) => eventInfo.separator === separator)) {
       try {
         if (isThrottled) {
           await (listener as ThrottledListener)(eventName, ...args);
@@ -117,7 +147,7 @@ export class EventEmitter {
           await (listener as AsyncListener)(eventName, ...args);
         }
       } catch (error) {
-        this.handleListenerError(eventName, error);
+        this.handleListenerError(eventName, error as Error);
       }
     }
   }
@@ -127,7 +157,7 @@ export class EventEmitter {
    * @param eventName - The name of the event for which the listener encountered an error.
    * @param error - The error object representing the encountered error.
    */
-  private handleListenerError(eventName: string, error: any): void {
+  private handleListenerError(eventName: string, error: Error): void {
     console.error(`Error in listener for event ${eventName}:`, error);
     console.error(error.stack);
   }
@@ -142,7 +172,7 @@ export class EventEmitter {
   private throttle(fn: Listener | AsyncListener, delay: number, eventName: string): ThrottledListener | AsyncListener {
     let lastCallTime = 0;
 
-    return async function (...args: any[]): Promise<void> {
+    return async function (...args: unknown[]): Promise<void> {
       const now = Date.now();
       if (now - lastCallTime >= delay) {
         lastCallTime = now;
@@ -161,7 +191,7 @@ export class EventEmitter {
   private debounce(fn: Listener | AsyncListener, delay: number, eventName: string): ThrottledListener | AsyncListener {
     let timeout: NodeJS.Timeout;
 
-    return async function (...args: any[]): Promise<void> {
+    return async function (...args: unknown[]): Promise<void> {
       clearTimeout(timeout);
       timeout = setTimeout(async () => {
         await (fn as AsyncListener)(eventName, ...args);

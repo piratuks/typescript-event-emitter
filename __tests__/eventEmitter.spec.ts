@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { EventEmitter, EventFilter } from '../src';
+import { EventEmitter, EventFilter, defaultSeparator } from '../src';
 
 interface Message {
   id: number;
@@ -103,11 +103,29 @@ describe('EventEmitter', function () {
       result.push('Listener');
     });
 
+    emitter.on(
+      'namespace3.*',
+      () => {
+        result.push('Listener');
+      },
+      { separator: ':' }
+    );
+
+    emitter.on(
+      'namespace3:*',
+      () => {
+        result.push('Listener');
+      },
+      { separator: ':' }
+    );
+
     await emitter.emit('other.event1');
     await emitter.emit('namespace1.event1');
     await emitter.emit('namespace1.event2');
+    await emitter.emit('namespace3:event1');
+    await emitter.emit('namespace3:event2');
 
-    assert.equal(result.length, 2);
+    assert.equal(result.length, 4);
   });
 
   it('should execute wildcard listeners as namespace for event', async function () {
@@ -119,12 +137,26 @@ describe('EventEmitter', function () {
       result.push('Listener');
     });
 
+    emitter.on('*.someOtherEvent', () => {
+      result.push('Listener');
+    });
+
+    emitter.on(
+      '*:someOtherEvent',
+      () => {
+        result.push('Listener');
+      },
+      { separator: ':' }
+    );
+
     await emitter.emit('other.event1');
     await emitter.emit('other.someEvent');
     await emitter.emit('namespace1.event1');
     await emitter.emit('namespace1.someEvent');
+    await emitter.emit('namespace1.event1');
+    await emitter.emit('namespace1:someOtherEvent');
 
-    assert.equal(result.length, 2);
+    assert.equal(result.length, 3);
   });
 
   it('should execute namespace for event', async function () {
@@ -325,5 +357,87 @@ describe('EventEmitter', function () {
     await new Promise(resolve => setTimeout(resolve, 200));
 
     assert.equal(receivedNotifications.length, 3);
+  });
+
+  it('should set new global options', () => {
+    const eventEmitter: EventEmitter = new EventEmitter({ separator: ':' });
+    const newSeparator = '_';
+    eventEmitter.setGlobalOptions({ separator: newSeparator });
+
+    const listener = () => {};
+    eventEmitter.on('testEvent', listener);
+
+    const listeners = eventEmitter['eventNamespaces']['']['testEvent'].listeners;
+    assert.strictEqual(listeners[0].eventInfo.separator, '_');
+  });
+
+  it('should set default global options', () => {
+    const eventEmitter: EventEmitter = new EventEmitter({ separator: ':' });
+
+    const listener = () => {};
+    eventEmitter.on('testEvent', listener);
+
+    const listeners = eventEmitter['eventNamespaces']['']['testEvent'].listeners;
+    assert.strictEqual(listeners[0].eventInfo.separator, ':');
+  });
+
+  it('should use local separator in on, off, and emit if provided', () => {
+    const eventEmitter: EventEmitter = new EventEmitter({ separator: ':' });
+
+    eventEmitter.on('example_event', () => {}, { separator: '_' });
+    const listeners = eventEmitter['eventNamespaces']['example']['event'].listeners;
+    assert.strictEqual(listeners[0].eventInfo.separator, '_');
+  });
+
+  it('should use default separator if neither global nor local separator is provided', () => {
+    const eventEmitter: EventEmitter = new EventEmitter();
+
+    eventEmitter.on('example.event', () => {});
+    const listeners = eventEmitter['eventNamespaces']['example']['event'].listeners;
+    assert.strictEqual(listeners[0].eventInfo.separator, defaultSeparator);
+  });
+
+  it('should be present event info for each listener', done => {
+    const eventEmitter: EventEmitter = new EventEmitter();
+
+    let listenerInvoked0 = false;
+    let listenerInvoked1 = false;
+    let listenerInvoked2 = false;
+    const removeListener0 = () => {
+      listenerInvoked0 = true;
+    };
+    const removeListener1 = () => {
+      listenerInvoked1 = true;
+    };
+    const removeListener2 = () => {
+      listenerInvoked2 = true;
+    };
+
+    eventEmitter.on('example0.event', removeListener0);
+    eventEmitter.on('example1_event', removeListener1, { separator: '_' });
+    eventEmitter.on('example2:event', removeListener2, { separator: ':' });
+
+    const listeners0 = eventEmitter['eventNamespaces']['example0']['event'].listeners;
+    const listeners1 = eventEmitter['eventNamespaces']['example1']['event'].listeners;
+    const listeners2 = eventEmitter['eventNamespaces']['example2']['event'].listeners;
+
+    assert.strictEqual(listeners0[0].eventInfo.separator, defaultSeparator);
+    assert.strictEqual(listeners1[0].eventInfo.separator, '_');
+    assert.strictEqual(listeners2[0].eventInfo.separator, ':');
+
+    eventEmitter.off('example0.event', removeListener0);
+    eventEmitter.off('example1_event', removeListener1);
+    eventEmitter.off('example2:event', removeListener2);
+
+    eventEmitter.emit('example0.event');
+    eventEmitter.emit('example1_event');
+    eventEmitter.emit('example2:event');
+
+    setTimeout(() => {
+      assert.strictEqual(listenerInvoked0, false);
+      assert.strictEqual(listenerInvoked1, false);
+      assert.strictEqual(listenerInvoked2, false);
+      done();
+    }, 1000);
   });
 });

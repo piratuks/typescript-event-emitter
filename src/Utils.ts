@@ -1,12 +1,14 @@
-import { separator } from './Constants';
+import { defaultSeparator, defaultWildCard } from './Constants';
+import { EventListener, EventNamespace } from './Interfaces';
 import { AsyncListener, ThrottledListener } from './Types';
 
 /**
  * Splits the given event string into namespace and event name parts.
- * @param event - The event string to parse.
+ * @param {string} event - The event string to parse.
+ * @param {string} separator - The separator used to split the event string.
  * @returns A tuple containing the namespace and event name.
  */
-export const parseEvent = (event: string): [string, string] => {
+export const parseEvent = (event: string, separator: string): [string, string] => {
   const parts = event.split(separator);
   const namespace = parts.length > 1 ? parts[0] : '';
   const eventName = parts[parts.length - 1];
@@ -37,4 +39,57 @@ export const insertSorted = (
  */
 export const isObjectEmpty = (obj: object): boolean => {
   return Object.keys(obj).length === 0;
+};
+
+/**
+ * Gets the prioritized value, favoring a new value over a default value.
+ * If a new value is provided and not empty, it is returned; otherwise, the default value is used.
+ * @param defaultValue - The default value.
+ * @param newValue - The potentially new value.
+ * @returns The prioritized value.
+ */
+export const getPrioritizedValue = (defaultVal: string, newVal: string | undefined): string => {
+  if (newVal) return newVal;
+
+  return defaultVal;
+};
+
+/**
+ * Finds information about a specific event, including its separator and event name,
+ * within the provided event namespaces.
+ *
+ * @param event - The name of the event for which information is to be retrieved.
+ * @param eventNamespaces - A record containing namespaces and their associated events and listeners.
+ * @returns separator from event information.
+ */
+export const findEventInfo = (event: string, eventNamespaces: Record<string, EventNamespace>): string => {
+  const findSeparatorInListeners = (listeners: EventListener[], condition: (l: EventListener) => boolean) => {
+    const foundListener = listeners.find(condition);
+    return foundListener?.eventInfo.separator || null;
+  };
+
+  const findSeparatorForEvent = (namespace: string, eventName: string, isWildcard: boolean) => {
+    const listeners = eventNamespaces[namespace]?.[eventName]?.listeners;
+    return listeners
+      ? isWildcard
+        ? findSeparatorInListeners(listeners, () => event.startsWith(namespace))
+        : findSeparatorInListeners(listeners, l => l.eventInfo.event === event) ||
+          (namespace === defaultWildCard
+            ? findSeparatorInListeners(listeners, l => event.endsWith(`${l.eventInfo.separator}${eventName}`))
+            : null)
+      : null;
+  };
+
+  for (const [namespace, events] of Object.entries(eventNamespaces)) {
+    for (const [eventName] of Object.entries(events)) {
+      const isWildcard = eventName === defaultWildCard;
+      const separator = findSeparatorForEvent(namespace, eventName, isWildcard);
+
+      if (separator) {
+        return separator;
+      }
+    }
+  }
+
+  return defaultSeparator;
 };

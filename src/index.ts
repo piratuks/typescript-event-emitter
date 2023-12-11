@@ -1,5 +1,5 @@
-export { separator, wildCard } from './Constants';
+export { defaultSeparator, defaultWildCard } from './Constants';
 export { EventEmitter } from './EventEmitter';
 export { globalEventBus } from './GlobalEventBus';
-export { EventListener, EventNamespace, Option } from './Interfaces';
+export { EventInfo, EventListener, EventNamespace, GlobalOption, Option } from './Interfaces';
 export { AsyncListener, EventFilter, Listener, ThrottledListener } from './Types';
