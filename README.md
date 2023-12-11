@@ -180,11 +180,11 @@ So basically for the given example, the listener will be executed after 300 mill
   const emitter = new EventEmitter();
 
   emitter.on('someEvent', () => {
-    result.push('Listener');
+    console.log('Listener');
   });
 
   emitter.on('namespace.someEvent', () => {
-    result.push('Listener');
+    console.log('Listener');
   });
 
   emitter.emit('other.event'); // No match, no listener executed
