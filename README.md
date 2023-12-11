@@ -78,19 +78,16 @@ And you're ready to create your own EventEmitter instances.
 ### Throttling
 
 1. First emit:
-
-- The 'throttleEvent' is emitted.
-- The throttled listener is executed immediately, and callCount becomes 1.
+    - The 'throttleEvent' is emitted.
+    - The throttled listener is executed immediately, and callCount becomes 1.
 
 2. Second emit (within the 100-millisecond throttle delay):
-
-- The 'throttleEvent' is emitted again.
-- This emit is ignored because throttling prevents the listener from being executed within the 100-millisecond throttle period.
+    - The 'throttleEvent' is emitted again.
+    - This emit is ignored because throttling prevents the listener from being executed within the 100-millisecond throttle period.
 
 3. Third emit (within the 100-millisecond throttle delay):
-
-- The 'throttleEvent' is emitted once more.
-- This emit is also ignored due to throttling.
+    - The 'throttleEvent' is emitted once more.
+    - This emit is also ignored due to throttling.
 
 ```bash
   const emitter = new EventEmitter();
@@ -110,20 +107,17 @@ And you're ready to create your own EventEmitter instances.
 ### Debouncing
 
 1. First emit:
-
-- The 'debounceEvent' is emitted.
-- The debounced listener is called but not immediately executed due to the debounce delay.
-- The debounced function is scheduled to be executed after 100 milliseconds.
+    - The 'debounceEvent' is emitted.
+    - The debounced listener is called but not immediately executed due to the debounce delay.
+    - The debounced function is scheduled to be executed after 100 milliseconds.
 
 2. Second emit (within the debounce delay):
-
-- The 'debounceEvent' is emitted.
-- The debounced listener is called again, but the previous scheduled execution is canceled, and a new one is scheduled for 100 milliseconds from the latest emit.
+    - The 'debounceEvent' is emitted.
+    - The debounced listener is called again, but the previous scheduled execution is canceled, and a new one is scheduled for 100 milliseconds from the latest emit.
 
 3. Third emit (within the debounce delay):
-
-- The 'debounceEvent' is emitted.
-- The debounced listener is called once more, canceling the previous scheduled execution again and scheduling a new one for 100 milliseconds from this emit.
+    - The 'debounceEvent' is emitted.
+    - The debounced listener is called once more, canceling the previous scheduled execution again and scheduling a new one for 100 milliseconds from this emit.
 
 So basically for the given example, the listener will be executed after 300 millisecond delay
 
