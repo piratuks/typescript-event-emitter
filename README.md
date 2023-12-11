@@ -198,13 +198,13 @@ So basically for the given example, the listener will be executed after 300 mill
   const emitter = new EventEmitter();
   //last to be executed
   emitter.on('priorityEvent', () => {
-      result.push('Low Priority Listener');
+      console.log('Low Priority Listener');
   });
   //first to be executed
   emitter.on(
     'priorityEvent',
     () => {
-      result.push('High Priority Listener');
+      console.log('High Priority Listener');
     },
     { priority: 2 }
   );
@@ -212,7 +212,7 @@ So basically for the given example, the listener will be executed after 300 mill
   emitter.on(
     'priorityEvent',
     () => {
-      result.push('Medium Priority Listener');
+      console.log('Medium Priority Listener');
     },
     { priority: 1 }
   );
