@@ -1,5 +1,5 @@
 {
-  "name": "typescrpt-event-emitter",
+  "name": "typescript-event-emitter",
   "version": "1.0.0",
   "description": "Versatile and feature-rich TypeScript library for event management, providing a solid foundation for building event-driven applications in TypeScript.",
   "author": "Evaldas Laureckas",
@@ -14,7 +14,7 @@
     "format": "prettier --write .",
     "pack": "npm pack",
     "login": "npm login",
-    "publich": "npm publish",
+    "publish": "npm publish",
     "test": "mocha --config mocha.config.js",
     "test:nyc": "nyc mocha --config mocha.config.js",
     "test:watch": "mocha --config mocha.config.js --watch",

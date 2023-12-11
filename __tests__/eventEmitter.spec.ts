@@ -1,5 +1,6 @@
+import { assert } from 'chai';
 import { EventEmitter, EventFilter } from '../src';
-import chai = require('chai');
+
 interface Message {
   id: number;
   content: string;
@@ -14,7 +15,7 @@ describe('EventEmitter', function () {
     const emitter = new EventEmitter();
 
     emitter.on('testEvent', (_eventname, data) => {
-      chai.assert.strictEqual(data, testData);
+      assert.strictEqual(data, testData);
       eventEmitted = true;
       done();
     });
@@ -42,7 +43,7 @@ describe('EventEmitter', function () {
     emitter.emit('removeListenerEvent');
 
     setTimeout(() => {
-      chai.assert.strictEqual(listenerInvoked, false);
+      assert.strictEqual(listenerInvoked, false);
       done();
     }, 1000);
   });
@@ -57,21 +58,21 @@ describe('EventEmitter', function () {
     emitter.on(
       'priorityEvent',
       () => {
-        result.push('Medium Priority Listener');
+        result.push('High Priority Listener');
       },
       { priority: 2 }
     );
     emitter.on(
       'priorityEvent',
       () => {
-        result.push('High Priority Listener');
+        result.push('Medium Priority Listener');
       },
       { priority: 1 }
     );
 
     await emitter.emit('priorityEvent');
 
-    chai.assert.deepEqual(result, ['Medium Priority Listener', 'High Priority Listener', 'Low Priority Listener']);
+    assert.deepEqual(result, ['High Priority Listener', 'Medium Priority Listener', 'Low Priority Listener']);
   });
 
   it('should execute wildcard listeners for everything', async function () {
@@ -86,7 +87,7 @@ describe('EventEmitter', function () {
     await emitter.emit('someEvent');
     await emitter.emit('namespace.someEvent');
 
-    chai.assert.equal(result.length, 2);
+    assert.equal(result.length, 2);
   });
 
   it('should execute wildcard listeners for namespace', async function () {
@@ -95,18 +96,55 @@ describe('EventEmitter', function () {
     const result: string[] = [];
 
     emitter.on('namespace1.*', () => {
-      result.push('Wildcard Namespace Listener');
+      result.push('Listener');
     });
 
     emitter.on('namespace2.*', () => {
-      result.push('Wildcard Namespace Listener');
+      result.push('Listener');
     });
 
     await emitter.emit('other.event1');
     await emitter.emit('namespace1.event1');
     await emitter.emit('namespace1.event2');
 
-    chai.assert.equal(result.length, 2);
+    assert.equal(result.length, 2);
+  });
+
+  it('should execute wildcard listeners as namespace for event', async function () {
+    const emitter = new EventEmitter();
+
+    const result: string[] = [];
+
+    emitter.on('*.someEvent', () => {
+      result.push('Listener');
+    });
+
+    await emitter.emit('other.event1');
+    await emitter.emit('other.someEvent');
+    await emitter.emit('namespace1.event1');
+    await emitter.emit('namespace1.someEvent');
+
+    assert.equal(result.length, 2);
+  });
+
+  it('should execute namespace for event', async function () {
+    const emitter = new EventEmitter();
+
+    const result: string[] = [];
+
+    emitter.on('someEvent', () => {
+      result.push('Listener');
+    });
+
+    emitter.on('namespace.someEvent', () => {
+      result.push('Listener');
+    });
+
+    await emitter.emit('other.event');
+    await emitter.emit('namespace.someEvent');
+    await emitter.emit('namespace.event');
+
+    assert.equal(result.length, 1);
   });
 
   it('should handle asynchronous event listeners using async/await', async function () {
@@ -124,7 +162,7 @@ describe('EventEmitter', function () {
 
     await emitter.emit('asyncEvent');
 
-    chai.assert.equal(flag, true);
+    assert.equal(flag, true);
   });
 
   it('should handle errors thrown by listeners during emit', async function () {
@@ -139,7 +177,7 @@ describe('EventEmitter', function () {
     try {
       await emitter.emit('errorEvent');
     } catch (error) {
-      chai.assert.strictEqual(error, 'Listener Error');
+      assert.strictEqual(error, 'Listener Error');
     }
   });
 
@@ -161,7 +199,7 @@ describe('EventEmitter', function () {
 
     console.error = consoleError;
 
-    chai.assert.isTrue(loggedError?.includes('Listener Error'));
+    assert.isTrue(loggedError?.includes('Listener Error'));
   });
 
   it('should not disrupt the event flow due to a listener error', async function () {
@@ -183,8 +221,8 @@ describe('EventEmitter', function () {
 
     await emitter.emit('errorEvent');
 
-    chai.assert.isTrue(firstListenerInvoked);
-    chai.assert.isTrue(secondListenerInvoked);
+    assert.isTrue(firstListenerInvoked);
+    assert.isTrue(secondListenerInvoked);
   });
 
   it('should debounce the listener', async function () {
@@ -208,11 +246,11 @@ describe('EventEmitter', function () {
 
     await execute();
 
-    chai.assert.strictEqual(callCount, 1);
+    assert.strictEqual(callCount, 1);
 
     await execute();
 
-    chai.assert.strictEqual(callCount, 2);
+    assert.strictEqual(callCount, 2);
   });
 
   it('should throttle the listener', async function () {
@@ -234,7 +272,7 @@ describe('EventEmitter', function () {
 
     await new Promise(resolve => setTimeout(resolve, 200));
 
-    chai.assert.strictEqual(callCount, 1);
+    assert.strictEqual(callCount, 1);
   });
 
   it('should filter events based on the provided filter function', async function () {
@@ -286,6 +324,6 @@ describe('EventEmitter', function () {
     ]);
     await new Promise(resolve => setTimeout(resolve, 200));
 
-    chai.assert.equal(receivedNotifications.length, 3);
+    assert.equal(receivedNotifications.length, 3);
   });
 });
