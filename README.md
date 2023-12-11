@@ -21,7 +21,7 @@ Versatile and feature-rich TypeScript library for event management, providing a 
 6.  Async/Await Pattern:
     - leveraging async/await for asynchronous operations ensures that it can handle asynchronous listeners gracefully.
 7.  Global Event Bus Integration:
-    - the integration with a global event bus enhances the modularity and usability of event system.
+    - the integration with a global event bus enhances the modularity and usability of the event system.
 8.  Error Handling:
     - logging errors to the console.
 
@@ -33,7 +33,7 @@ $ npm install --save typescript-event-emitter
 
 ## usage
 
-After installation the only thing you need to do is require the module:
+After installation, the only thing you need to do is require the module:
 
 ```bash
 import { EventEmitter } from 'typescript-event-emitter';
@@ -125,7 +125,7 @@ And you're ready to create your own EventEmitter instances.
 - The 'debounceEvent' is emitted.
 - The debounced listener is called once more, canceling the previous scheduled execution again and scheduling a new one for 100 milliseconds from this emit.
 
-So basically for the given example listener will be executed after 300 millisecond delay
+So basically for the given example, the listener will be executed after 300 millisecond delay
 
 ```bash
   const emitter = new EventEmitter();
@@ -155,7 +155,7 @@ So basically for the given example listener will be executed after 300 milliseco
 
 ```bash
   const emitter = new EventEmitter();
-  emitter.on('namespace1.*', () => { // listener will be executed 2 times, wildcard for namepsace listens to anything within that namespace
+  emitter.on('namespace1.*', () => { // listener will be executed 2 times, wildcard for namespace listens to anything within that namespace
     console.log("Executed 1")
   });
 
@@ -329,12 +329,12 @@ So basically for the given example listener will be executed after 300 milliseco
     secondListenerInvoked = true;
   });
 
-  emitter.emit('errorEvent'); //all 3 will be fired and event flow wont be disrupted
+  emitter.emit('errorEvent'); //all 3 will be fired and event flow won't be disrupted
 ```
 
 ### Global Event Bus
 
-Global event bus is a singleton which contains instance of event emitter. Functionality/features and etc same it is just a centralized mechanism for communication across different parts of an application.
+The global event bus is a singleton that contains an instance of an event emitter. Functionality/features, etc is just a centralized mechanism for communication across different parts of an application.
 
 ```bash
 import { globalEventBus } from 'typescript-event-emitter';
@@ -361,13 +361,12 @@ const { globalEventBus } = require('typescript-event-emitter');
 
 ### Tests and benchmarks
 
-This module is well tested. You can run:
+This module is well-tested. You can run:
 
-`npm test` to run the tests under Node.js.
-`test:nyc` to run the tests under Node.js and get the coverage
+`npm run test` to run the tests under Node.js.
+`npm run test:nyc` to run the tests under Node.js and get the coverage
 
-Tests and benchmarks are not included in the npm package. If you want to play
-with them you have to clone the GitHub repository. Note that you will have to run an additional `npm i` in the benchmarks folder before `npm run benchmark`.
+Tests are not included in the npm package. If you want to play with them, you must clone the GitHub repository.
 
 ## contributing
 
