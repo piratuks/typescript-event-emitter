@@ -360,7 +360,7 @@ const { globalEventBus } = require('typescript-event-emitter');
 
 ```
 
-### Custom separator per listener and Global configs ///////////
+### Custom separator per listener and Global configs
 
 ```bash
   const eventEmitter: EventEmitter = new EventEmitter({ separator: ':' }); // setting global separator if not provided it will revert to default "."
