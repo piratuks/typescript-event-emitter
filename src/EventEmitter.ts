@@ -8,7 +8,6 @@ export class EventEmitter {
   private eventFilters: EventFilter[] = [];
   private readonly wildCardNamespace = '';
   private globalOption: GlobalOption;
-  private localOption: Option;
 
   /**
    * Creates an instance of EventEmitter.
@@ -17,7 +16,6 @@ export class EventEmitter {
    */
   constructor(globalOption: GlobalOption = { separator: defaultSeparator }) {
     this.globalOption = { ...globalOption };
-    this.localOption = {};
   }
 
   /**
@@ -40,8 +38,7 @@ export class EventEmitter {
    * @param options.separator - Separator used for parsing the event (if applicable, default is '.').
    */
   on(event: string, listener: Listener | AsyncListener, option: Option = {}): void {
-    this.localOption = option;
-    const { filter, throttle, debounce, priority, separator }: Option = this.localOption;
+    const { filter, throttle, debounce, priority, separator }: Option = option;
     const usedSeparator = getPrioritizedValue(this.globalOption.separator, separator);
     const eventInfo = { separator: usedSeparator, event };
 
