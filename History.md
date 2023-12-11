@@ -1,6 +1,6 @@
 # typescript-event-emitter
 
-## 2023-12-10, version 1.0.0
+## 2023-12-11, version 1.0.9
 
 Initial release with the following functionality
 
