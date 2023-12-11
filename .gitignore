@@ -3,3 +3,4 @@ dist/
 TODO.txt
 .nyc_output
 *.tgz
+coverage
