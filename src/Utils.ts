@@ -72,7 +72,7 @@ export const findEventInfo = (event: string, eventNamespaces: Record<string, Eve
     const listeners = eventNamespaces[namespace]?.[eventName]?.listeners;
     return listeners
       ? isWildcard
-        ? findSeparatorInListeners(listeners, l => event.startsWith(namespace))
+        ? findSeparatorInListeners(listeners, () => event.startsWith(namespace))
         : findSeparatorInListeners(listeners, l => l.eventInfo.event === event) ||
           (namespace === defaultWildCard
             ? findSeparatorInListeners(listeners, l => event.endsWith(`${l.eventInfo.separator}${eventName}`))
@@ -81,7 +81,7 @@ export const findEventInfo = (event: string, eventNamespaces: Record<string, Eve
   };
 
   for (const [namespace, events] of Object.entries(eventNamespaces)) {
-    for (const [eventName, _] of Object.entries(events)) {
+    for (const [eventName] of Object.entries(events)) {
       const isWildcard = eventName === defaultWildCard;
       const separator = findSeparatorForEvent(namespace, eventName, isWildcard);
 
