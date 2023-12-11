@@ -364,6 +364,7 @@ const { globalEventBus } = require('typescript-event-emitter');
 This module is well-tested. You can run:
 
 `npm run test` to run the tests under Node.js.
+<br/>
 `npm run test:nyc` to run the tests under Node.js and get the coverage
 
 Tests are not included in the npm package. If you want to play with them, you must clone the GitHub repository.
