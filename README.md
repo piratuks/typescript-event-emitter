@@ -290,7 +290,7 @@ So basically for the given example, the listener will be executed after 300 mill
     });
   });
   await emitter.emit('asyncEvent');
-  console.log(flat===true) // will be true
+  console.log(flag); // will be true
 ```
 
 ### Error Handling
