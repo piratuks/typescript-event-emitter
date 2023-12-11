@@ -1,5 +1,5 @@
 import { EventEmitter } from './EventEmitter';
-import { Option } from './Interfaces';
+import { GlobalOption, Option } from './Interfaces';
 import { AsyncListener, Listener } from './Types';
 
 class GlobalEventBus {
@@ -23,6 +23,14 @@ class GlobalEventBus {
   }
 
   /**
+   * Sets global options for the EventEmitter.
+   * @param options - Global options, such as the separator.
+   */
+  setGlobalOptions(options: GlobalOption): void {
+    this.emitter.setGlobalOptions(options);
+  }
+
+  /**
    * Adds a listener for the specified event through the GlobalEventBus, with optional filtering, throttling, debouncing, and priority.
    * @param event - The event name to listen for.
    * @param listener - The listener function to be called when the event is emitted.
@@ -31,9 +39,14 @@ class GlobalEventBus {
    * @param options.throttle - The time delay (in milliseconds) between allowed invocations of the listener.
    * @param options.debounce - The time delay (in milliseconds) before the listener is called after the last invocation.
    * @param options.priority - The priority of the listener, higher values execute first (default is 0).
+   * @param options.separator - Separator used for parsing the event (if applicable, default is '.').
    */
-  on(event: string, listener: Listener | AsyncListener, { filter, throttle, debounce, priority }: Option = {}): void {
-    this.emitter.on(event, listener, { filter, throttle, debounce, priority });
+  on(
+    event: string,
+    listener: Listener | AsyncListener,
+    { filter, throttle, debounce, priority, separator }: Option = {}
+  ): void {
+    this.emitter.on(event, listener, { filter, throttle, debounce, priority, separator });
   }
 
   /**
@@ -51,11 +64,11 @@ class GlobalEventBus {
    * @param args - Additional arguments to be passed to the listeners.
    * @returns A promise that resolves when all listeners have been executed.
    */
-  async emit(event: string, ...args: any[]): Promise<void> {
+  async emit(event: string, ...args: unknown[]): Promise<void> {
     try {
       await this.emitter.emit(event, ...args);
     } catch (error) {
-      this.handleEventBusError(event, error);
+      this.handleEventBusError(event, error as Error);
     }
   }
 
@@ -64,7 +77,7 @@ class GlobalEventBus {
    * @param event - The name of the event that encountered an error during emission.
    * @param error - The error object representing the encountered error.
    */
-  private handleEventBusError(event: string, error: any): void {
+  private handleEventBusError(event: string, error: Error): void {
     console.error(`Error in GlobalEventBus while emitting event ${event}:`, error);
     console.error(error.stack);
   }

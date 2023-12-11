@@ -1,17 +1,25 @@
 import { assert } from 'chai';
-import { insertSorted, isObjectEmpty, parseEvent } from '../src/Utils';
+import { EventNamespace } from '../src';
+import { defaultSeparator } from '../src/Constants';
+import { findEventInfo, getPrioritizedValue, insertSorted, isObjectEmpty, parseEvent } from '../src/Utils';
 
 describe('parseEvent', () => {
   it('should correctly parse the event with a separator', () => {
     const event = 'namespace.eventName';
-    const result = parseEvent(event);
+    const result = parseEvent(event, defaultSeparator);
     assert.deepStrictEqual(result, ['namespace', 'eventName']);
   });
 
   it('should handle events without a namespace', () => {
     const event = 'eventName';
-    const result = parseEvent(event);
+    const result = parseEvent(event, defaultSeparator);
     assert.deepStrictEqual(result, ['', 'eventName']);
+  });
+
+  it('should correctly parse the event with a custom separator', () => {
+    const event = 'namespace----eventName';
+    const result = parseEvent(event, '----');
+    assert.deepStrictEqual(result, ['namespace', 'eventName']);
   });
 });
 
@@ -101,5 +109,67 @@ describe('insertSorted', () => {
     const listenerObject = { listener: someListener, priority: 2 };
     insertSorted(listeners, listenerObject);
     assert.deepStrictEqual(listeners, [{ listener: listenerA, priority: 2 }, listenerObject]);
+  });
+});
+
+describe('getPrioritizedValue', () => {
+  it('should return the new value if provided', () => {
+    const defaultVal = ':';
+    const newVal = ',';
+
+    const result = getPrioritizedValue(defaultVal, newVal);
+
+    assert.strictEqual(result, newVal);
+  });
+
+  it('should return the default value if new value is undefined', () => {
+    const defaultVal = ':';
+    const newVal: string | undefined = undefined;
+
+    const result = getPrioritizedValue(defaultVal, newVal);
+
+    assert.strictEqual(result, defaultVal);
+  });
+
+  it('should return the default value if new value is an empty string', () => {
+    const defaultVal = ':';
+    const newVal = '';
+
+    const result = getPrioritizedValue(defaultVal, newVal);
+
+    assert.strictEqual(result, defaultVal);
+  });
+});
+
+describe('findEventInfo', () => {
+  const eventNamespaces: Record<string, EventNamespace> = {
+    namespace1: {
+      event1: {
+        listeners: [{ listener: () => {}, eventInfo: { separator: '|', event: 'namespace1.event1' }, priority: 0 }]
+      },
+      event2: {
+        listeners: [{ listener: () => {}, eventInfo: { separator: ',', event: 'namespace1.event2' }, priority: 0 }]
+      }
+    },
+    namespace2: {
+      event3: {
+        listeners: [{ listener: () => {}, eventInfo: { separator: ',', event: 'namespace2.event3' }, priority: 0 }]
+      }
+    }
+  };
+
+  it('should find event information when a listener matches the provided event', () => {
+    const result = findEventInfo('namespace1.event1', eventNamespaces);
+    assert.deepStrictEqual(result, '|');
+  });
+
+  it('should use the default separator when no matching listener is found', () => {
+    const result = findEventInfo('event4', eventNamespaces);
+    assert.deepStrictEqual(result, defaultSeparator);
+  });
+
+  it('should find event information in different namespaces', () => {
+    const result = findEventInfo('namespace2.event3', eventNamespaces);
+    assert.deepStrictEqual(result, ',');
   });
 });
