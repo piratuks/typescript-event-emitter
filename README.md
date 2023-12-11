@@ -268,7 +268,7 @@ So basically for the given example, the listener will be executed after 300 mill
       messageType: 'mention',
       sender: 'other_user'
   };
-  const unrelatedEvent: Message = { id: 4, content: 'Irrelevant event', messageType: 'other' sender: 'unknown' };
+  const unrelatedEvent: Message = { id: 4, content: 'Irrelevant event', messageType: 'other', sender: 'unknown' };
 
   emitter.emit('other.event', unrelatedEvent),
   emitter.emit('notification', generalNotification),
