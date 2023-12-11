@@ -96,11 +96,11 @@ describe('EventEmitter', function () {
     const result: string[] = [];
 
     emitter.on('namespace1.*', () => {
-      result.push('Wildcard Namespace Listener');
+      result.push('Listener');
     });
 
     emitter.on('namespace2.*', () => {
-      result.push('Wildcard Namespace Listener');
+      result.push('Listener');
     });
 
     await emitter.emit('other.event1');
@@ -108,6 +108,43 @@ describe('EventEmitter', function () {
     await emitter.emit('namespace1.event2');
 
     assert.equal(result.length, 2);
+  });
+
+  it('should execute wildcard listeners as namespace for event', async function () {
+    const emitter = new EventEmitter();
+
+    const result: string[] = [];
+
+    emitter.on('*.someEvent', () => {
+      result.push('Listener');
+    });
+
+    await emitter.emit('other.event1');
+    await emitter.emit('other.someEvent');
+    await emitter.emit('namespace1.event1');
+    await emitter.emit('namespace1.someEvent');
+
+    assert.equal(result.length, 2);
+  });
+
+  it('should execute namespace for event', async function () {
+    const emitter = new EventEmitter();
+
+    const result: string[] = [];
+
+    emitter.on('someEvent', () => {
+      result.push('Listener');
+    });
+
+    emitter.on('namespace.someEvent', () => {
+      result.push('Listener');
+    });
+
+    await emitter.emit('other.event');
+    await emitter.emit('namespace.someEvent');
+    await emitter.emit('namespace.event');
+
+    assert.equal(result.length, 1);
   });
 
   it('should handle asynchronous event listeners using async/await', async function () {

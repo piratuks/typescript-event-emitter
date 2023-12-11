@@ -140,7 +140,59 @@ So basically for the given example listener will be executed after 300 milliseco
 
 ### Wildcard
 
+```bash
+  const emitter = new EventEmitter();
+  emitter.on('*', () => { // listener will be executed for both emits, wildcard listens to anything
+    console.log("Executed")
+  });
+  emitter.emit('someEvent');
+  emitter.emit('namespace.someEvent');
+```
+
+```bash
+  const emitter = new EventEmitter();
+  emitter.on('namespace1.*', () => { // listener will be executed 2 times, wildcard for namepsace listens to anything within that namespace
+    console.log("Executed 1")
+  });
+
+  emitter.on('namespace2.*', () => { // listener will not be executed
+    console.log("Executed 2")
+  });
+
+  emitter.emit('other.event1');
+  emitter.emit('namespace1.event1');
+  emitter.emit('namespace1.event2');
+```
+
+```bash
+  const emitter = new EventEmitter();
+  emitter.on('*.someEvent', () => { // wildcard listeners as namespace for event
+     console.log("Executed")
+  });
+
+  emitter.emit('other.event1'); // No match, no listener executed
+  emitter.emit('other.someEvent'); // Matches the pattern, listener executed
+  emitter.emit('namespace1.event1'); // No match, no listener executed
+  emitter.emit('namespace1.someEvent'); // Matches the pattern, listener executed
+```
+
 ### Namespace
+
+```bash
+  const emitter = new EventEmitter();
+
+  emitter.on('someEvent', () => {
+    result.push('Listener');
+  });
+
+  emitter.on('namespace.someEvent', () => {
+    result.push('Listener');
+  });
+
+  emitter.emit('other.event'); // No match, no listener executed
+  emitter.emit('namespace.someEvent'); // Matches the pattern, listener executed
+  emitter.emit('namespace.event'); // No match, no listener executed
+```
 
 ### Priority Queue
 
@@ -255,8 +307,10 @@ So basically for the given example listener will be executed after 300 milliseco
   } catch (error) {
     console.log(error) // will be 'Listener Error'
   }
+```
 
-
+```bash
+  const emitter = new EventEmitter();
   let firstListenerInvoked = false;
   let secondListenerInvoked = false;
   emitter.on('errorEvent', () => {
@@ -322,7 +376,3 @@ Please read our [SECURITY REPORTS](SECURITY.md)
 ## license
 
 [MIT](LICENSE)
-
-```
-
-```
