@@ -1,6 +1,6 @@
 {
   "name": "typescript-event-emitter",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Versatile and feature-rich TypeScript library for event management, providing a solid foundation for building event-driven applications in TypeScript.",
   "author": "Evaldas Laureckas",
   "main": "dist/index.js",
@@ -45,7 +45,29 @@
     "once",
     "subscribe",
     "Typescrpt EventEmitter",
-    "Typescrpt Events Management"
+    "Typescrpt Events Management",
+    "event handling",
+    "event system",
+    "event-driven programming",
+    "event dispatcher",
+    "event sourcing",
+    "publish-subscribe",
+    "event delegation",
+    "custom events",
+    "typescript events",
+    "typescript event emitter",
+    "typescript event handling",
+    "observable pattern",
+    "event pattern",
+    "event bus",
+    "type-safe events",
+    "event stream",
+    "event listener",
+    "typescript design patterns",
+    "typescript programming",
+    "async events",
+    "event registration",
+    "typescript reactive programming"
   ],
   "bugs": {
     "url": "https://github.com/piratuks/typescript-event-emitter/issues"
