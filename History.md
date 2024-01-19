@@ -1,5 +1,9 @@
 # typescript-event-emitter
 
+## 2023-12-12, version 2.0.1
+
+1. Package update / documentation update
+
 ## 2023-12-12, version 2.0.0
 
 1. Custom separator per listener and Global configs
