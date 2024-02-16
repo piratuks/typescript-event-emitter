@@ -1,6 +1,6 @@
 {
   "name": "typescript-event-emitter",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Versatile and feature-rich TypeScript library for event management, providing a solid foundation for building event-driven applications in TypeScript.",
   "author": "Evaldas Laureckas",
   "main": "dist/index.js",

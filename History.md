@@ -1,5 +1,9 @@
 # typescript-event-emitter
 
+## 2023-12-12, version 2.0.2
+
+1. Republished 2.0.1 build as it was published withouth a build
+
 ## 2023-12-12, version 2.0.1
 
 1. Package update / documentation update
