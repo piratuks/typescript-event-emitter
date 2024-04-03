@@ -392,7 +392,7 @@ const { globalEventBus } = require('typescript-event-emitter');
   globalEventBus.on("namespace:someEvent", () => {}, { separator: ":" });  // listener separator will be ':'
 ```
 
-### Tests
+## Tests
 
 This module is well-tested. You can run:
 
