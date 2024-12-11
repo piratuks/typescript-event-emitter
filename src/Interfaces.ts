@@ -15,12 +15,15 @@ export interface Option {
   debounce?: number;
   priority?: number;
   separator?: string;
+  concurrency?: number;
 }
 
 export interface EventListener {
   listener: Listener;
   priority: number;
   eventInfo: EventInfo;
+  concurrency: number;
+  id: string;
 }
 
 export interface EventNamespace {
