@@ -29,6 +29,8 @@ Versatile and feature-rich TypeScript library for event management, providing a 
     - ability to change global separator which is used for listeners where separator is not provided.
 10. Concurrency:
     - Limits the number of concurrent executions for listeners, ensuring efficient handling of multiple events at once.
+11. Subscription Management:
+    - Allows users to easily manage and view their subscriptions to specific event types.
 
 ## installation
 
@@ -456,6 +458,71 @@ const { globalEventBus } = require('typescript-event-emitter');
   // Listener 2 started processing: Payload 4
   // Listener 2 finished processing: Payload 4
 
+```
+
+### Subscription Management
+
+```bash
+  const emitter = new EventEmitter();
+
+  const event1 = 'namespace.event1';
+  const event2 = 'namespace.event2';
+  const listener1 = () => {};
+  const listener2 = () => {};
+
+  emitter.on(event1, listener1, { priority: 1, concurrency: 5 });
+  emitter.on(event1, listener2, { priority: 2 });
+  emitter.on(event2, listener1, { priority: 3 });
+
+  const subscriptions = emitter.subscriptions();
+
+  // Output
+  // Lists array of all subscriptions to event key and listener count
+  //[
+  //   {
+  //    "event":"namespace.event1",
+  //    "listenerCount":2
+  //  },
+  //  {
+  //    "event":"namespace.event2",
+  //    "listenerCount":1
+  //  }
+  //]
+
+  const result1 = emitter.inspectSubscription(event1);
+
+  // Output of result1
+  // {UUID1} & {UUID2} are UUID string
+  // Lists array of all subscriptions details for particular event
+  // [
+  //   {
+  //     id: {UUID1},
+  //     priority: 2,
+  //     concurrency: null,
+  //     eventInfo: { separator: '.', event: 'namespace.event1' }
+  //   },
+  //   {
+  //     id: {UUID2},
+  //     priority: 1,
+  //     concurrency: 5,
+  //     eventInfo: { separator: '.', event: 'namespace.event1' }
+  //   }
+  // ];
+
+  // replace {UUID1} with actual id
+  emitter.removeSubscription(event1, {UUID1});
+  const result2 = emitter.inspectSubscription(event1);
+
+  // Output
+  // {UUID2} is UUID string
+  // [
+  //   {
+  //     id: {UUID2},
+  //     priority: 1,
+  //     concurrency: 5,
+  //     eventInfo: { separator: '.', event: 'namespace.event1' }
+  //   }
+  // ];
 ```
 
 ## Tests

@@ -197,30 +197,14 @@ describe('EventEmitter', function () {
     assert.equal(flag, true);
   });
 
-  it('should handle errors thrown by listeners during emit', async function () {
-    const emitter = new EventEmitter();
-
-    emitter.on('errorEvent', () => {
-      throw new Error('Listener Error');
-    });
-
-    console.error = () => {};
-
-    try {
-      await emitter.emit('errorEvent');
-    } catch (error) {
-      assert.strictEqual(error, 'Listener Error');
-    }
-  });
-
   it('should log errors thrown by listeners during emit', async function () {
     const emitter = new EventEmitter();
 
     const consoleError = console.error;
 
-    let loggedError: string | undefined;
+    const loggedError: string[] = [];
     console.error = (message: string) => {
-      loggedError = message;
+      loggedError.push(message);
     };
 
     emitter.on('errorEvent', () => {
@@ -231,7 +215,7 @@ describe('EventEmitter', function () {
 
     console.error = consoleError;
 
-    assert.isTrue(loggedError?.includes('Listener Error'));
+    assert.isTrue(loggedError.some((item: string) => item.indexOf('Listener Error') > -1));
   });
 
   it('should not disrupt the event flow due to a listener error', async function () {
@@ -250,6 +234,8 @@ describe('EventEmitter', function () {
     emitter.on('errorEvent', () => {
       secondListenerInvoked = true;
     });
+
+    console.error = () => {};
 
     await emitter.emit('errorEvent');
 
@@ -367,7 +353,7 @@ describe('EventEmitter', function () {
     const listener = () => {};
     eventEmitter.on('testEvent', listener);
 
-    const listeners = eventEmitter['eventNamespaces']['']['testEvent'].listeners;
+    const listeners = eventEmitter.getListenerManager()['eventNamespaces']['']['testEvent'].listeners;
     assert.strictEqual(listeners[0].eventInfo.separator, '_');
   });
 
@@ -377,7 +363,7 @@ describe('EventEmitter', function () {
     const listener = () => {};
     eventEmitter.on('testEvent', listener);
 
-    const listeners = eventEmitter['eventNamespaces']['']['testEvent'].listeners;
+    const listeners = eventEmitter.getListenerManager()['eventNamespaces']['']['testEvent'].listeners;
     assert.strictEqual(listeners[0].eventInfo.separator, ':');
   });
 
@@ -385,7 +371,7 @@ describe('EventEmitter', function () {
     const eventEmitter: EventEmitter = new EventEmitter({ separator: ':' });
 
     eventEmitter.on('example_event', () => {}, { separator: '_' });
-    const listeners = eventEmitter['eventNamespaces']['example']['event'].listeners;
+    const listeners = eventEmitter.getListenerManager()['eventNamespaces']['example']['event'].listeners;
     assert.strictEqual(listeners[0].eventInfo.separator, '_');
   });
 
@@ -393,7 +379,7 @@ describe('EventEmitter', function () {
     const eventEmitter: EventEmitter = new EventEmitter();
 
     eventEmitter.on('example.event', () => {});
-    const listeners = eventEmitter['eventNamespaces']['example']['event'].listeners;
+    const listeners = eventEmitter.getListenerManager()['eventNamespaces']['example']['event'].listeners;
     assert.strictEqual(listeners[0].eventInfo.separator, defaultSeparator);
   });
 
@@ -417,9 +403,9 @@ describe('EventEmitter', function () {
     eventEmitter.on('example1_event', removeListener1, { separator: '_' });
     eventEmitter.on('example2:event', removeListener2, { separator: ':' });
 
-    const listeners0 = eventEmitter['eventNamespaces']['example0']['event'].listeners;
-    const listeners1 = eventEmitter['eventNamespaces']['example1']['event'].listeners;
-    const listeners2 = eventEmitter['eventNamespaces']['example2']['event'].listeners;
+    const listeners0 = eventEmitter.getListenerManager()['eventNamespaces']['example0']['event'].listeners;
+    const listeners1 = eventEmitter.getListenerManager()['eventNamespaces']['example1']['event'].listeners;
+    const listeners2 = eventEmitter.getListenerManager()['eventNamespaces']['example2']['event'].listeners;
 
     assert.strictEqual(listeners0[0].eventInfo.separator, defaultSeparator);
     assert.strictEqual(listeners1[0].eventInfo.separator, '_');
@@ -494,6 +480,77 @@ describe('EventEmitter', function () {
         'Listener 2 finished processing: Payload 4'
       ],
       'Messages are not in the expected order'
+    );
+  });
+
+  it('should list all event subscriptions correctly', () => {
+    const emitter = new EventEmitter();
+
+    const event1 = 'namespace.event1';
+    const event2 = 'namespace.event2';
+    const listener1 = () => {};
+    const listener2 = () => {};
+
+    emitter.on(event1, listener1, { priority: 1, concurrency: 5 });
+    emitter.on(event1, listener2, { priority: 2 });
+    emitter.on(event2, listener1, { priority: 3 });
+
+    const subscriptions = emitter.subscriptions();
+
+    assert.equal(subscriptions.length, 2);
+    assert.deepEqual(
+      subscriptions.find(sub => sub.event === event1),
+      { event: event1, listenerCount: 2 }
+    );
+    assert.deepEqual(
+      subscriptions.find(sub => sub.event === event2),
+      { event: event2, listenerCount: 1 }
+    );
+  });
+
+  it('should return empty array when no listeners are found for a given event', function () {
+    const emitter = new EventEmitter();
+    const result = emitter.inspectSubscription('namespace.nonExistentEvent');
+    assert.deepEqual(result, []);
+  });
+
+  it('should correctly inspect a subscription', () => {
+    const emitter = new EventEmitter();
+    const mockEventName = 'namespace.eventName';
+    emitter.on(mockEventName, async () => {}, { filter: () => true, priority: 1, concurrency: 5 });
+    emitter.on(mockEventName, async () => {}, { filter: () => true, priority: 2 });
+    const result = emitter.inspectSubscription(mockEventName);
+
+    assert.deepEqual(result.length, 2);
+
+    assert.deepEqual(result.length, 2);
+    assert.deepEqual(result[0].priority, 2);
+    assert.deepEqual(result[0].concurrency, Infinity);
+    assert.deepEqual(result[0].eventInfo, { separator: '.', event: 'namespace.eventName' });
+    assert.deepEqual(result[1].priority, 1);
+    assert.deepEqual(result[1].concurrency, 5);
+    assert.deepEqual(result[1].eventInfo, { separator: '.', event: 'namespace.eventName' });
+  });
+
+  it('should remove the listener by ID', () => {
+    const emitter = new EventEmitter();
+    const mockEventName = 'namespace.eventName';
+    const functionDummy = async () => {};
+
+    emitter.on(mockEventName, functionDummy, { filter: () => true, priority: 1, concurrency: 5 });
+    emitter.on(mockEventName, functionDummy, { filter: () => true, priority: 2 });
+    let result = emitter.inspectSubscription(mockEventName);
+
+    const listenerIdToRemove = result[0].id;
+
+    emitter.removeSubscription('namespace.eventName', listenerIdToRemove);
+
+    result = emitter.inspectSubscription(mockEventName);
+
+    assert.lengthOf(result, 1);
+    assert.notInclude(
+      result.map(l => l.id),
+      listenerIdToRemove
     );
   });
 });

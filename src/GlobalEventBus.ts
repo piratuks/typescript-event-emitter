@@ -1,5 +1,6 @@
 import { EventEmitter } from './EventEmitter';
-import { GlobalOption, Option } from './Interfaces';
+import { EventInfo, GlobalOption, Option } from './Interfaces';
+import { ListenerManager } from './ListenerManager';
 import { AsyncListener, Listener } from './Types';
 
 class GlobalEventBus {
@@ -28,6 +29,24 @@ class GlobalEventBus {
    */
   setGlobalOptions(options: GlobalOption): void {
     this.emitter.setGlobalOptions(options);
+  }
+
+  /**
+   * Retrieves the current global options set for the EventEmitter instance.
+   *
+   * @returns {GlobalOption} - The current global options object containing properties such as the separator used across all listeners.
+   */
+  getGlobalOptions(): GlobalOption {
+    return this.emitter.getGlobalOptions();
+  }
+
+  /**
+   * Retrieves the current instance of the `ListenerManager`.
+   *
+   * @returns {ListenerManager} The current instance of `ListenerManager`.
+   */
+  getListenerManager(): ListenerManager {
+    return this.emitter.getListenerManager();
   }
 
   /**
@@ -70,6 +89,36 @@ class GlobalEventBus {
     } catch (error) {
       this.handleEventBusError(event, error as Error);
     }
+  }
+
+  /**
+   * Lists all event subscriptions, including event names and listener count.
+   *
+   * @returns {Array<{ event: string, listenerCount: number }>} - An array of objects, each containing event name and count of listeners.
+   */
+  subscriptions(): Array<{ event: string; listenerCount: number }> {
+    return this.emitter.subscriptions();
+  }
+  /**
+   * Inspects a specific event subscription, showing details of listeners.
+   *
+   * @param event - The event name, possibly with a namespace (e.g., 'namespace.eventName').
+   * @returns {Array<Object>} - An array of objects, each containing listener details (id, priority, concurrency, eventInfo, listener).
+   */
+  inspectSubscription(
+    event: string
+  ): Array<{ id: string; eventInfo: EventInfo; listener: Listener; priority: number; concurrency: number }> {
+    return this.emitter.inspectSubscription(event);
+  }
+
+  /**
+   * Remove a subscription from the ListenerManager.
+   *
+   * @param event - The event name which can include a namespace (e.g., 'namespace.eventName').
+   * @param listenerId - The unique identifier of the listener to be removed.
+   */
+  removeSubscription(event: string, listenerId: string): void {
+    this.emitter.removeSubscription(event, listenerId);
   }
 
   /**
