@@ -1,7 +1,14 @@
 import { assert } from 'chai';
 import { EventNamespace } from '../src';
 import { defaultSeparator } from '../src/Constants';
-import { findEventInfo, getPrioritizedValue, insertSorted, isObjectEmpty, parseEvent } from '../src/Utils';
+import {
+  findEventInfo,
+  generateUUID,
+  getPrioritizedValue,
+  insertSorted,
+  isObjectEmpty,
+  parseEvent
+} from '../src/Utils';
 
 describe('parseEvent', () => {
   it('should correctly parse the event with a separator', () => {
@@ -145,15 +152,39 @@ describe('findEventInfo', () => {
   const eventNamespaces: Record<string, EventNamespace> = {
     namespace1: {
       event1: {
-        listeners: [{ listener: () => {}, eventInfo: { separator: '|', event: 'namespace1.event1' }, priority: 0 }]
+        listeners: [
+          {
+            listener: () => {},
+            eventInfo: { separator: '|', event: 'namespace1.event1' },
+            priority: 0,
+            concurrency: 10,
+            id: generateUUID()
+          }
+        ]
       },
       event2: {
-        listeners: [{ listener: () => {}, eventInfo: { separator: ',', event: 'namespace1.event2' }, priority: 0 }]
+        listeners: [
+          {
+            listener: () => {},
+            eventInfo: { separator: ',', event: 'namespace1.event2' },
+            priority: 0,
+            concurrency: 10,
+            id: generateUUID()
+          }
+        ]
       }
     },
     namespace2: {
       event3: {
-        listeners: [{ listener: () => {}, eventInfo: { separator: ',', event: 'namespace2.event3' }, priority: 0 }]
+        listeners: [
+          {
+            listener: () => {},
+            eventInfo: { separator: ',', event: 'namespace2.event3' },
+            priority: 0,
+            concurrency: 10,
+            id: generateUUID()
+          }
+        ]
       }
     }
   };
@@ -171,5 +202,27 @@ describe('findEventInfo', () => {
   it('should find event information in different namespaces', () => {
     const result = findEventInfo('namespace2.event3', eventNamespaces);
     assert.deepStrictEqual(result, ',');
+  });
+});
+describe('generateUUID', () => {
+  it('should generate a valid UUID string', () => {
+    const uuid = generateUUID();
+
+    // Regular expression to validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    assert.match(uuid, uuidRegex, 'Generated UUID is not in the correct format');
+  });
+
+  it('should generate unique UUIDs', () => {
+    const uuid1 = generateUUID();
+    const uuid2 = generateUUID();
+
+    assert.notEqual(uuid1, uuid2, 'Generated UUIDs should be unique');
+  });
+
+  it('should generate UUID of correct length', () => {
+    const uuid = generateUUID();
+    assert.strictEqual(uuid.length, 36, 'Generated UUID should have a length of 36 characters');
   });
 });

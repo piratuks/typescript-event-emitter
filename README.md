@@ -26,7 +26,9 @@ Versatile and feature-rich TypeScript library for event management, providing a 
     - logging errors to the console.
 9.  Custom separator per listener and Global configs:
     - ability to set custom separator per listener which would override global separator dedicated for listeners.
-    - ability to change global separator which is used for listeners where separator is not provided
+    - ability to change global separator which is used for listeners where separator is not provided.
+10. Concurrency:
+    - Limits the number of concurrent executions for listeners, ensuring efficient handling of multiple events at once.
 
 ## installation
 
@@ -390,6 +392,70 @@ const { globalEventBus } = require('typescript-event-emitter');
 
   globalEventBus.setGlobalOptions({ separator: "-" }); // sets global separator
   globalEventBus.on("namespace:someEvent", () => {}, { separator: ":" });  // listener separator will be ':'
+```
+
+### Concurrency
+
+```bash
+
+  // Step 1: Create an instance of EventEmitter
+  const emitter = new EventEmitter();
+
+  // Step 2: Add event listeners
+  emitter.on('data:received', async (eventName, data) => {
+    console.log(`Listener 1 started processing: ${data}`);
+    await new Promise(resolve => setTimeout(resolve, 150)); // Simulate processing time
+    console.log(`Listener 1 finished processing: ${data}`);
+  }, { concurrency: 2 });  // Limit this listener to 2 concurrent executions
+
+  emitter.on('data:received', async (eventName, data) => {
+    console.log(`Listener 2 started processing: ${data}`);
+    await new Promise(resolve => setTimeout(resolve, 200)); // Simulate processing time
+    console.log(`Listener 2 finished processing: ${data}`);
+  }, { concurrency: 1 });  // Limit this listener to 1 concurrent execution
+
+  emitter.on('data:received', async (eventName, data) => {
+    console.log(`Listener 3 started processing: ${data}`);
+    await new Promise(resolve => setTimeout(resolve, 250)); // Simulate processing time
+    console.log(`Listener 3 finished processing: ${data}`);
+  }, { concurrency: 3 });  // Limit this listener to 3 concurrent executions
+
+  // Step 3: Emit an event
+  console.log('Emitting event: data:received');
+  await Promise.all([
+    emitter.emit('data:received', 'Payload 1'),
+    emitter.emit('data:received', 'Payload 2'),
+    emitter.emit('data:received', 'Payload 3'),
+    emitter.emit('data:received', 'Payload 4'),
+  ]);
+
+  // Output
+  // Emitting event: data:received
+  // Listener 1 started processing: Payload 1
+  // Listener 2 started processing: Payload 1
+  // Listener 3 started processing: Payload 1
+  // Listener 1 started processing: Payload 2
+  // Listener 3 started processing: Payload 2
+  // Listener 3 started processing: Payload 3
+  // Listener 1 finished processing: Payload 1
+  // Listener 1 started processing: Payload 3
+  // Listener 1 finished processing: Payload 2
+  // Listener 1 started processing: Payload 4
+  // Listener 2 finished processing: Payload 1
+  // Listener 2 started processing: Payload 2
+  // Listener 3 finished processing: Payload 1
+  // Listener 3 started processing: Payload 4
+  // Listener 3 finished processing: Payload 2
+  // Listener 3 finished processing: Payload 3
+  // Listener 1 finished processing: Payload 3
+  // Listener 1 finished processing: Payload 4
+  // Listener 2 finished processing: Payload 2
+  // Listener 2 started processing: Payload 3
+  // Listener 3 finished processing: Payload 4
+  // Listener 2 finished processing: Payload 3
+  // Listener 2 started processing: Payload 4
+  // Listener 2 finished processing: Payload 4
+
 ```
 
 ## Tests

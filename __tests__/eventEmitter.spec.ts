@@ -440,4 +440,60 @@ describe('EventEmitter', function () {
       done();
     }, 1000);
   });
+
+  it('should handle concurrency correctly', async function () {
+    const messages: string[] = [];
+
+    const emitter = new EventEmitter();
+
+    emitter.on(
+      'data:received',
+      async (eventName, data) => {
+        messages.push(`Listener 1 started processing: ${data}`);
+        await new Promise(resolve => setTimeout(resolve, 150));
+        messages.push(`Listener 1 finished processing: ${data}`);
+      },
+      { concurrency: 2 }
+    );
+
+    emitter.on(
+      'data:received',
+      async (eventName, data) => {
+        messages.push(`Listener 2 started processing: ${data}`);
+        await new Promise(resolve => setTimeout(resolve, 200));
+        messages.push(`Listener 2 finished processing: ${data}`);
+      },
+      { concurrency: 1 }
+    );
+
+    await Promise.all([
+      emitter.emit('data:received', 'Payload 1'),
+      emitter.emit('data:received', 'Payload 2'),
+      emitter.emit('data:received', 'Payload 3'),
+      emitter.emit('data:received', 'Payload 4')
+    ]);
+
+    assert.deepEqual(
+      messages,
+      [
+        'Listener 1 started processing: Payload 1',
+        'Listener 2 started processing: Payload 1',
+        'Listener 1 started processing: Payload 2',
+        'Listener 1 finished processing: Payload 1',
+        'Listener 1 started processing: Payload 3',
+        'Listener 1 finished processing: Payload 2',
+        'Listener 1 started processing: Payload 4',
+        'Listener 2 finished processing: Payload 1',
+        'Listener 2 started processing: Payload 2',
+        'Listener 1 finished processing: Payload 3',
+        'Listener 1 finished processing: Payload 4',
+        'Listener 2 finished processing: Payload 2',
+        'Listener 2 started processing: Payload 3',
+        'Listener 2 finished processing: Payload 3',
+        'Listener 2 started processing: Payload 4',
+        'Listener 2 finished processing: Payload 4'
+      ],
+      'Messages are not in the expected order'
+    );
+  });
 });

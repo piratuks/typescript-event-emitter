@@ -1,13 +1,22 @@
 import { defaultSeparator, defaultWildCard } from './Constants';
 import { EventNamespace, GlobalOption, Option } from './Interfaces';
 import { AsyncListener, EventFilter, Listener, ThrottledListener } from './Types';
-import { findEventInfo, getPrioritizedValue, insertSorted, isObjectEmpty, parseEvent } from './Utils';
+import { findEventInfo, generateUUID, getPrioritizedValue, insertSorted, isObjectEmpty, parseEvent } from './Utils';
 
 export class EventEmitter {
   private eventNamespaces: Record<string, EventNamespace> = {};
   private eventFilters: EventFilter[] = [];
   private readonly wildCardNamespace = '';
   private globalOption: GlobalOption;
+  private executingListeners: Record<string, number> = {};
+  private listenerQueue: Array<{
+    listener: Listener;
+    id: string;
+    concurrency: number;
+    isThrottled: boolean;
+    eventName: string;
+    args: unknown[];
+  }> = [];
 
   /**
    * Creates an instance of EventEmitter.
@@ -35,10 +44,11 @@ export class EventEmitter {
    * @param options.throttle - The time delay (in milliseconds) for throttling the listener's execution.
    * @param options.debounce - The time delay (in milliseconds) for debouncing the listener's execution.
    * @param options.priority - The priority of the listener, higher values execute first (default is 0).
+   * @param options.concurrency - Maximum number of listeners executed in parallel (default is unlimited).
    * @param options.separator - Separator used for parsing the event (if applicable, default is '.').
    */
   on(event: string, listener: Listener | AsyncListener, option: Option = {}): void {
-    const { filter, throttle, debounce, priority, separator }: Option = option;
+    const { filter, throttle, debounce, priority, concurrency, separator }: Option = option;
     const usedSeparator = getPrioritizedValue(this.globalOption.separator, separator);
     const eventInfo = { separator: usedSeparator, event };
 
@@ -51,7 +61,13 @@ export class EventEmitter {
           ? this.debounce(listener, debounce, eventName)
           : listener;
 
-    const listenerObject = { listener: throttledListener, priority: priority ?? 0, eventInfo };
+    const listenerObject = {
+      listener: throttledListener,
+      priority: priority ?? 0,
+      eventInfo,
+      concurrency: concurrency ?? Infinity,
+      id: generateUUID()
+    };
 
     if (!this.eventNamespaces[namespace]) {
       this.eventNamespaces[namespace] = {};
@@ -139,7 +155,36 @@ export class EventEmitter {
     const specificListeners = this.eventNamespaces[namespace]?.[checkEventName]?.listeners ?? [];
     const isThrottled = this.eventNamespaces[namespace]?.[checkEventName]?.throttled ?? false;
 
-    for (const { listener } of specificListeners.filter(({ eventInfo }) => eventInfo.separator === separator)) {
+    const listenerPromises = specificListeners
+      .filter(({ eventInfo }) => eventInfo.separator === separator)
+      .map(async ({ listener, concurrency, id }) => {
+        await this.processListener(listener, id, concurrency, isThrottled, eventName, args);
+      });
+
+    await Promise.all(listenerPromises);
+  }
+
+  /**
+   * Executes a listener with concurrency control and handles queuing if the concurrency limit is reached.
+   *
+   * @param listener - The listener function to execute, either throttled or async.
+   * @param id - The unique identifier for the listener to track execution.
+   * @param concurrency - The maximum number of concurrent executions allowed for this listener.
+   * @param isThrottled - A flag indicating whether the listener is throttled.
+   * @param eventName - The name of the event being emitted.
+   * @param args - The arguments to pass to the listener function.
+   */
+  private processListener = async (
+    listener: Listener,
+    id: string,
+    concurrency: number,
+    isThrottled: boolean,
+    eventName: string,
+    args: unknown[]
+  ) => {
+    const executingCount = this.executingListeners[id] || 0;
+    if (executingCount < concurrency) {
+      this.executingListeners[id] = executingCount + 1;
       try {
         if (isThrottled) {
           await (listener as ThrottledListener)(eventName, ...args);
@@ -148,7 +193,34 @@ export class EventEmitter {
         }
       } catch (error) {
         this.handleListenerError(eventName, error as Error);
+      } finally {
+        this.executingListeners[id]--;
+        await this.dequeueNextListener(id);
       }
+    } else {
+      this.listenerQueue.push({ listener, id, concurrency, isThrottled, eventName, args });
+    }
+  };
+
+  /**
+   * Dequeues and processes the next listener from the listener queue.
+   *
+   * @param id - The ID of the listener to be dequeued.
+   * @returns {Promise<void>} A promise that resolves once the listener has been processed.
+   */
+  private async dequeueNextListener(id: string): Promise<void> {
+    const nextTaskIndex = this.listenerQueue.findIndex(task => task.id === id);
+    if (nextTaskIndex !== -1) {
+      const [nextTask] = this.listenerQueue.splice(nextTaskIndex, 1);
+
+      await this.processListener(
+        nextTask.listener,
+        nextTask.id,
+        nextTask.concurrency,
+        nextTask.isThrottled,
+        nextTask.eventName,
+        nextTask.args
+      );
     }
   }
 
