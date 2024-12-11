@@ -1,7 +1,8 @@
+import { v4 as uuidv4 } from 'uuid';
 import { defaultSeparator, defaultWildCard } from './Constants';
 import { EventNamespace, GlobalOption, Option } from './Interfaces';
 import { AsyncListener, EventFilter, Listener, ThrottledListener } from './Types';
-import { findEventInfo, generateUUID, getPrioritizedValue, insertSorted, isObjectEmpty, parseEvent } from './Utils';
+import { findEventInfo, getPrioritizedValue, insertSorted, isObjectEmpty, parseEvent } from './Utils';
 
 export class EventEmitter {
   private eventNamespaces: Record<string, EventNamespace> = {};
@@ -66,7 +67,7 @@ export class EventEmitter {
       priority: priority ?? 0,
       eventInfo,
       concurrency: concurrency ?? Infinity,
-      id: generateUUID()
+      id: uuidv4()
     };
 
     if (!this.eventNamespaces[namespace]) {
