@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { defaultWildCard } from './Constants';
 import { EventEmitter } from './EventEmitter';
-import { EventInfo, EventNamespace, Option } from './Interfaces';
+import { EventHistory, EventInfo, EventNamespace, Option } from './Interfaces';
 import { AsyncListener, EventFilter, Listener, ThrottledListener } from './Types';
 import { findEventInfo, getPrioritizedValue, insertSorted, isObjectEmpty, parseEvent } from './Utils';
 
@@ -18,6 +18,36 @@ export class ListenerManager {
     eventName: string;
     args: unknown[];
   }> = [];
+  private eventHistory: Array<EventHistory> = [];
+
+  /**
+   * Retrieves the event history based on a specific event name.
+   *
+   * @param event - The name of the event to filter by. This can include a namespace (e.g., 'namespace.eventName').
+   * @returns {Array<{ event: string, listenerId: string, timestamp: number, args: unknown[] }>}
+   * - An array of objects that match the specified event name, each containing the event name, listener ID, timestamp, and arguments.
+   */
+  public getSpecificEventHistory(event: string): Array<EventHistory> {
+    return this.eventHistory.filter(history => {
+      let matches = true;
+
+      if (event) {
+        matches = matches && history.event === event;
+      }
+
+      return matches;
+    });
+  }
+
+  /**
+   * Retrieves all recorded event histories.
+   *
+   * @returns {Array<{ event: string, listenerId: string, timestamp: number, args: unknown[] }>}
+   * - An array of objects, each containing the event name, listener ID, timestamp, and the arguments passed to the listener.
+   */
+  public getAllEventHistory(): Array<EventHistory> {
+    return this.eventHistory;
+  }
 
   /**
    * @param emitter - The `EventEmitter` instance where the listener is being added.
@@ -162,6 +192,22 @@ export class ListenerManager {
   }
 
   /**
+   * Records an event occurrence in the history log.
+   *
+   * @param event - The name of the event that was emitted, which can include a namespace (e.g., 'namespace.eventName').
+   * @param listenerId - The unique identifier of the listener that was invoked.
+   * @param args - The arguments that were passed to the listener when it was invoked.
+   */
+  private recordEventHistory(event: string, listenerId: string, args: unknown[]): void {
+    this.eventHistory.push({
+      event,
+      listenerId: listenerId,
+      timestamp: Date.now(),
+      args
+    });
+  }
+
+  /**
    * Remove a subscription or listener from the ListenerManager.
    *
    * @param event - The event name which can include a namespace (e.g., 'namespace.eventName').
@@ -250,6 +296,16 @@ export class ListenerManager {
           await (listener as ThrottledListener)(eventName, ...args);
         } else {
           await (listener as AsyncListener)(eventName, ...args);
+        }
+
+        if (eventName === 'testEventHistory') {
+          console.log('sadasdsad');
+        }
+
+        this.recordEventHistory(eventName, id, args);
+
+        if (eventName === 'testEventHistory') {
+          console.log('sadasdsad', this.eventHistory);
         }
       } catch (error) {
         this.handleListenerError(eventName, error as Error);
