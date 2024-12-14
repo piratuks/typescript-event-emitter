@@ -599,7 +599,7 @@ describe('EventEmitter', function () {
     await emitter.emit(testEvent2);
 
     const history = emitter.getSpecificEventHistory(testEvent2);
-    console.log(emitter.getAllEventHistory());
+
     assert.equal(history.length, 1, 'History should have two events');
     assert.equal(history[0].event, testEvent2, 'Event name should match');
   });
