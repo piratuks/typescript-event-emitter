@@ -50,6 +50,29 @@ class GlobalEventBus {
   }
 
   /**
+   * Retrieves the event history based on a specific event name.
+   *
+   * @param event - The name of the event to filter by. This can include a namespace (e.g., 'namespace.eventName').
+   * @returns {Array<{ event: string, listenerId: string, timestamp: number, args: unknown[] }>}
+   * - An array of objects that match the specified event name, each containing the event name, listener ID, timestamp, and arguments.
+   */
+  public getSpecificEventHistory(
+    event: string
+  ): Array<{ event: string; listenerId: string; timestamp: number; args: unknown[] }> {
+    return this.emitter.getSpecificEventHistory(event);
+  }
+
+  /**
+   * Retrieves all recorded event histories.
+   *
+   * @returns {Array<{ event: string, listenerId: string, timestamp: number, args: unknown[] }>}
+   * - An array of objects, each containing the event name, listener ID, timestamp, and the arguments passed to the listener.
+   */
+  public getAllEventHistory(): Array<{ event: string; listenerId: string; timestamp: number; args: unknown[] }> {
+    return this.emitter.getAllEventHistory();
+  }
+
+  /**
    * Adds a listener for the specified event through the GlobalEventBus, with optional filtering, throttling, debouncing, and priority.
    * @param event - The event name to listen for.
    * @param listener - The listener function to be called when the event is emitted.

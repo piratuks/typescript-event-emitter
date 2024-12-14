@@ -31,6 +31,8 @@ Versatile and feature-rich TypeScript library for event management, providing a 
     - Limits the number of concurrent executions for listeners, ensuring efficient handling of multiple events at once.
 11. Subscription Management:
     - Allows users to easily manage and view their subscriptions to specific event types.
+12. Event History:
+    - Event history provides a mechanism to record and retrieve detailed logs of all events and listener executions.
 
 ## installation
 
@@ -523,6 +525,56 @@ const { globalEventBus } = require('typescript-event-emitter');
   //     eventInfo: { separator: '.', event: 'namespace.event1' }
   //   }
   // ];
+```
+
+### Event History
+
+```bash
+    const emitter = new EventEmitter();
+    const testEvent1 = 'testEvent1';
+    const testEvent2 = 'testEvent2';
+
+    emitter.on(testEvent1, () => {});
+    emitter.on(testEvent2, () => {});
+
+    await emitter.emit(testEvent1);
+    await emitter.emit(testEvent1);
+    await emitter.emit(testEvent2);
+
+    const allHistory = emitter.getAllEventHistory();
+    const specificHistory = emitter.getSpecificEventHistory(testEvent2);
+
+    // Outcome allHistory
+    // [
+    //   {
+    //     event: 'testEvent1',
+    //     listenerId: '08f743fc-cd34-41af-9542-cef704f8892e',
+    //     timestamp: 1734170275281,
+    //     args: []
+    //   },
+    //   {
+    //     event: 'testEvent1',
+    //     listenerId: '08f743fc-cd34-41af-9542-cef704f8892e',
+    //     timestamp: 1734170275281,
+    //     args: []
+    //   },
+    //   {
+    //     event: 'testEvent2',
+    //     listenerId: '96ca9cd5-9ef6-4c6c-984a-d9657c98ea31',
+    //     timestamp: 1734170275281,
+    //     args: []
+    //   }
+    // ]
+
+    // Outcome specificHistory
+    // [
+    //   {
+    //     event: 'testEvent2',
+    //     listenerId: '96ca9cd5-9ef6-4c6c-984a-d9657c98ea31',
+    //     timestamp: 1734170275281,
+    //     args: []
+    //   }
+    // ]
 ```
 
 ## Tests

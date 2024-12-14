@@ -1,5 +1,5 @@
 import { defaultSeparator } from './Constants';
-import { EventInfo, GlobalOption, Option } from './Interfaces';
+import { EventHistory, EventInfo, GlobalOption, Option } from './Interfaces';
 import { ListenerManager } from './ListenerManager';
 import { AsyncListener, Listener } from './Types';
 
@@ -41,6 +41,27 @@ export class EventEmitter {
    */
   getListenerManager(): ListenerManager {
     return this.listenerManager;
+  }
+
+  /**
+   * Retrieves the event history based on a specific event name.
+   *
+   * @param event - The name of the event to filter by. This can include a namespace (e.g., 'namespace.eventName').
+   * @returns {Array<{ event: string, listenerId: string, timestamp: number, args: unknown[] }>}
+   * - An array of objects that match the specified event name, each containing the event name, listener ID, timestamp, and arguments.
+   */
+  public getSpecificEventHistory(event: string): Array<EventHistory> {
+    return this.listenerManager.getSpecificEventHistory(event);
+  }
+
+  /**
+   * Retrieves all recorded event histories.
+   *
+   * @returns {Array<{ event: string, listenerId: string, timestamp: number, args: unknown[] }>}
+   * - An array of objects, each containing the event name, listener ID, timestamp, and the arguments passed to the listener.
+   */
+  public getAllEventHistory(): Array<EventHistory> {
+    return this.listenerManager.getAllEventHistory();
   }
 
   /**

@@ -9,6 +9,13 @@ export interface EventInfo {
   event: string;
 }
 
+export interface EventHistory {
+  event: string;
+  listenerId: string;
+  timestamp: number;
+  args: unknown[];
+}
+
 export interface Option {
   filter?: EventFilter;
   throttle?: number;

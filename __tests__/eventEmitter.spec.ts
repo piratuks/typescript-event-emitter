@@ -1,5 +1,6 @@
 import { assert } from 'chai';
 import { EventEmitter, EventFilter, defaultSeparator } from '../src';
+import { EventHistory } from '../src/Interfaces';
 
 interface Message {
   id: number;
@@ -552,5 +553,54 @@ describe('EventEmitter', function () {
       result.map(l => l.id),
       listenerIdToRemove
     );
+  });
+
+  it('should record event history correctly', async () => {
+    const emitter = new EventEmitter();
+    const testEvent = 'testEventHistory';
+    const args = [1, 'test', { key: 'value' }];
+
+    emitter.on(testEvent, () => {});
+
+    await emitter.emit(testEvent, args);
+
+    const history: EventHistory[] = emitter.getAllEventHistory();
+
+    assert.equal(history.length, 1, 'History should have one event');
+    assert.equal(history[0].event, testEvent, 'Event name should match');
+  });
+
+  it('should record multiple events correctly', async () => {
+    const emitter = new EventEmitter();
+    const testEvent = 'testEvent';
+
+    emitter.on(testEvent, () => {});
+
+    await emitter.emit(testEvent);
+    await emitter.emit(testEvent);
+
+    const history = emitter.getAllEventHistory();
+
+    assert.equal(history.length, 2, 'History should have two events');
+    assert.equal(history[0].event, testEvent, 'First event name should match');
+    assert.equal(history[1].event, testEvent, 'Second event name should match');
+  });
+
+  it('should retrieve specific event history', async () => {
+    const emitter = new EventEmitter();
+    const testEvent1 = 'testEvent1';
+    const testEvent2 = 'testEvent2';
+
+    emitter.on(testEvent1, () => {});
+    emitter.on(testEvent2, () => {});
+
+    await emitter.emit(testEvent1);
+    await emitter.emit(testEvent1);
+    await emitter.emit(testEvent2);
+
+    const history = emitter.getSpecificEventHistory(testEvent2);
+    console.log(emitter.getAllEventHistory());
+    assert.equal(history.length, 1, 'History should have two events');
+    assert.equal(history[0].event, testEvent2, 'Event name should match');
   });
 });
