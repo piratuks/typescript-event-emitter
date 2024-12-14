@@ -298,15 +298,8 @@ export class ListenerManager {
           await (listener as AsyncListener)(eventName, ...args);
         }
 
-        if (eventName === 'testEventHistory') {
-          console.log('sadasdsad');
-        }
-
         this.recordEventHistory(eventName, id, args);
 
-        if (eventName === 'testEventHistory') {
-          console.log('sadasdsad', this.eventHistory);
-        }
       } catch (error) {
         this.handleListenerError(eventName, error as Error);
       } finally {
