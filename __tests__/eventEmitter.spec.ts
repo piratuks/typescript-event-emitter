@@ -622,7 +622,6 @@ describe('EventEmitter', function () {
 
     // Next call should execute immediately
     emitter.emit('test', 4);
-    console.log(results);
     assert.deepEqual(results, [1, 4]);
   });
 
@@ -764,5 +763,116 @@ describe('EventEmitter', function () {
     // Wait for debounce delay
     await wait(150);
     assert.deepEqual(results, [1, 3]);
+  });
+});
+
+describe('EventEmitter Hooks', () => {
+  it('should call "before" and "after" hooks around an event emission', async () => {
+    const emitter = new EventEmitter();
+    const executionOrder: string[] = [];
+
+    const beforeHook = async (eventName: string, ...args: unknown[]) => {
+      assert.strictEqual(eventName, 'testEvent');
+      assert.strictEqual(args[0], 1);
+      executionOrder.push('before');
+    };
+
+    const listener = (eventName: string, ...args: unknown[]) => {
+      assert.strictEqual(eventName, 'testEvent');
+      assert.strictEqual(args[0], 1);
+      executionOrder.push('listener');
+    };
+
+    const afterHook = async (eventName: string, ...args: unknown[]) => {
+      assert.strictEqual(eventName, 'testEvent');
+      assert.strictEqual(args[0], 1);
+      executionOrder.push('after');
+    };
+
+    emitter.before(beforeHook);
+    emitter.on('testEvent', listener);
+    emitter.after(afterHook);
+
+    await emitter.emit('testEvent', 1);
+
+    assert.deepEqual(executionOrder, ['before', 'listener', 'after']);
+  });
+
+  it('should handle multiple hooks of the same type', async () => {
+    const emitter = new EventEmitter();
+    let beforeCount = 0;
+    let afterCount = 0;
+
+    emitter.before(() => {
+      beforeCount++;
+    });
+    emitter.before(() => {
+      beforeCount++;
+    });
+    emitter.after(() => {
+      afterCount++;
+    });
+    emitter.after(() => {
+      afterCount++;
+    });
+
+    await emitter.emit('testEvent');
+
+    assert.strictEqual(beforeCount, 2);
+    assert.strictEqual(afterCount, 2);
+  });
+
+  it('should call hooks even if no listeners exist for the event', async () => {
+    const emitter = new EventEmitter();
+    const executionOrder: string[] = [];
+
+    emitter.before(() => {
+      executionOrder.push('before');
+    });
+    emitter.after(() => {
+      executionOrder.push('after');
+    });
+
+    await emitter.emit('unusedEvent');
+
+    assert.deepEqual(executionOrder, ['before', 'after']);
+  });
+
+  it('should allow removing hooks', async () => {
+    const emitter = new EventEmitter();
+    let beforeCalled = false;
+    let afterCalled = false;
+
+    const beforeHook = () => {
+      beforeCalled = true;
+    };
+    const afterHook = () => {
+      afterCalled = true;
+    };
+
+    emitter.before(beforeHook);
+    emitter.after(afterHook);
+
+    emitter.removeBefore(beforeHook);
+    emitter.removeAfter(afterHook);
+
+    await emitter.emit('testEvent');
+
+    assert.strictEqual(beforeCalled, false);
+    assert.strictEqual(afterCalled, false);
+  });
+
+  it('should pass correct arguments to hooks', async () => {
+    const emitter = new EventEmitter();
+    let receivedArgs: unknown[] = [];
+
+    const beforeHook = (_eventName: string, ...args: unknown[]) => {
+      receivedArgs = args;
+    };
+
+    emitter.before(beforeHook);
+    await emitter.emit('testEvent', 1, 'hello', { a: 2 });
+
+    assert.deepEqual(receivedArgs, [1, 'hello', { a: 2 }]);
   });
 });

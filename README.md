@@ -34,6 +34,8 @@ Versatile and feature-rich TypeScript library for event management, providing a 
     - Allows users to easily manage and view their subscriptions to specific event types.
 12. Event History:
     - Event history provides a mechanism to record and retrieve detailed logs of all events and listener executions.
+13. Hooks / lifecycle methods:
+    - Hooks or lifecycle methods allow you to execute custom logic at specific stages of an event’s lifecycle, such as before dispatch, after execution, or on listener completion.
 
 ## installation
 
@@ -620,6 +622,50 @@ const { globalEventBus } = require('typescript-event-emitter');
     //     args: []
     //   }
     // ]
+```
+
+### Hooks / lifecycle methods
+
+Lifecycle hooks allow you to register functions that are triggered before or after an event is emitted, regardless of which event it is. This is incredibly useful for cross-cutting concerns like logging, analytics, or transaction management.
+
+- **`before(hook)`**: Registers a function to run _before_ any listeners for an event are executed.
+- **`after(hook)`**: Registers a function to run _after_ all listeners for an event have completed.
+
+```typescript
+const emitter = new EventEmitter();
+const executionOrder = [];
+
+// Register a "before" hook for logging
+emitter.before((eventName, ...args) => {
+  console.log(`About to emit '${eventName}' with args:`, args);
+  executionOrder.push('before');
+});
+
+// Register an "after" hook for metrics
+emitter.after(eventName => {
+  console.log(`Finished emitting '${eventName}'.`);
+  executionOrder.push('after');
+});
+
+// Register a standard listener
+emitter.on('user:created', user => {
+  console.log('User created:', user);
+  executionOrder.push('listener');
+});
+
+await emitter.emit('user:created', { id: 1, name: 'John Doe' });
+
+// Output will be logged in this order:
+// 1. "About to emit 'user:created' with args: [ { id: 1, name: 'John Doe' } ]"
+// 2. "User created: { id: 1, name: 'John Doe' }"
+// 3. "Finished emitting 'user:created'."
+
+console.log(executionOrder); // Will be ['before', 'listener', 'after']
+
+// You can also remove hooks
+const myHook = () => console.log('This will be removed.');
+emitter.before(myHook);
+emitter.removeBefore(myHook); // The hook is no longer active
 ```
 
 ## Tests

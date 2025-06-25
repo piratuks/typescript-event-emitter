@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { defaultWildCard } from './Constants';
 import { EventEmitter } from './EventEmitter';
-import { EventHistory, EventInfo, EventNamespace, Option } from './Interfaces';
+import { EventHistory, EventInfo, EventNamespace, Hook, Hooks, Option } from './Interfaces';
 import { AsyncListener, EventFilter, Listener, ThrottledListener } from './Types';
 import { findEventInfo, getPrioritizedValue, insertSorted, isObjectEmpty, parseEvent } from './Utils';
 
@@ -19,6 +19,7 @@ export class ListenerManager {
     args: unknown[];
   }> = [];
   private eventHistory: Array<EventHistory> = [];
+  private hooks: Hooks = { beforeEmit: [], afterEmit: [] };
 
   /**
    * Retrieves the event history based on a specific event name.
@@ -144,6 +145,10 @@ export class ListenerManager {
    * This method processes and executes listeners for specific namespaces and wildcard combinations.
    */
   async executeListeners(_emitter: EventEmitter, event: string, args: unknown[]): Promise<void> {
+    for (const hook of this.hooks.beforeEmit) {
+      await hook(event, ...args);
+    }
+
     const separator = findEventInfo(event, this.eventNamespaces);
 
     const [namespace, eventName] = parseEvent(event, separator);
@@ -157,6 +162,10 @@ export class ListenerManager {
         this.executeSpecificListeners(defaultWildCard, eventName, eventName, separator, args),
         this.executeSpecificListeners(namespace, eventName, eventName, separator, args)
       ]);
+    }
+
+    for (const hook of this.hooks.afterEmit) {
+      await hook(event, ...args);
     }
   }
 
@@ -454,5 +463,27 @@ export class ListenerManager {
         lastEventName = null;
       }, delay);
     };
+  }
+
+  /**
+   * Adds a lifecycle hook to be executed before or after an event is emitted.
+   * @param type - The type of hook, either 'beforeEmit' or 'afterEmit'.
+   * @param hook - The function to be executed.
+   */
+  addHook(type: keyof Hooks, hook: Hook): void {
+    this.hooks[type].push(hook);
+  }
+
+  /**
+   * Removes a previously added lifecycle hook.
+   * @param type - The type of hook to remove.
+   * @param hook - The hook function to remove.
+   */
+  removeHook(type: keyof Hooks, hook: Hook): void {
+    const hooksOfType = this.hooks[type];
+    const index = hooksOfType.indexOf(hook);
+    if (index > -1) {
+      hooksOfType.splice(index, 1);
+    }
   }
 }

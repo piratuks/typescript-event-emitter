@@ -51,3 +51,10 @@ export interface EventNamespace {
     throttled?: boolean;
   };
 }
+
+export type Hook = (eventName: string, ...args: unknown[]) => void | Promise<void>;
+
+export interface Hooks {
+  beforeEmit: Hook[];
+  afterEmit: Hook[];
+}
