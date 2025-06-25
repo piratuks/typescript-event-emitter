@@ -1,5 +1,5 @@
 import { defaultSeparator } from './Constants';
-import { EventHistory, EventInfo, GlobalOption, Option } from './Interfaces';
+import { EventHistory, EventInfo, GlobalOption, Hook, Option } from './Interfaces';
 import { ListenerManager } from './ListenerManager';
 import { AsyncListener, Listener } from './Types';
 
@@ -129,4 +129,42 @@ export class EventEmitter {
   removeSubscription(event: string, listenerId: string): void {
     this.listenerManager.removeSubscription(event, listenerId);
   }
+
+  /**
+   * Registers a hook to be executed before any listeners for an event are called.
+   * @param hook - The function to execute before the event.
+   */
+  before(hook: Hook): this {
+    this.listenerManager.addHook('beforeEmit', hook);
+    return this;
+  }
+
+  /**
+   * Registers a hook to be executed after all listeners for an event have completed.
+   * @param hook - The function to execute after the event.
+   */
+  after(hook: Hook): this {
+    this.listenerManager.addHook('afterEmit', hook);
+    return this;
+  }
+
+  /**
+   * Removes a 'before' hook.
+   * @param hook - The hook function to remove.
+   */
+  removeBefore(hook: Hook): this {
+    this.listenerManager.removeHook('beforeEmit', hook);
+    return this;
+  }
+
+  /**
+   * Removes an 'after' hook.
+   * @param hook - The hook function to remove.
+   */
+  removeAfter(hook: Hook): this {
+    this.listenerManager.removeHook('afterEmit', hook);
+    return this;
+  }
 }
+
+export const globalEventBus = new EventEmitter();

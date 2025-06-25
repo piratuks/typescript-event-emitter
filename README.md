@@ -10,6 +10,7 @@ Versatile and feature-rich TypeScript library for event management, providing a 
 
 1.  Throttling and Debouncing:
     - flexibility for handling events in scenarios where rapid or frequent triggering needs to be controlled.
+    - advanced Throttling and Debouncing which supports options with leading/trailing edge control. This allows for fine-grained control over when event listeners are executed.
 2.  Wildcard Listeners:
     - supporting wildcard listeners with the '\*' namespace, allowing global event handling.
 3.  Namespace Support:
@@ -33,6 +34,8 @@ Versatile and feature-rich TypeScript library for event management, providing a 
     - Allows users to easily manage and view their subscriptions to specific event types.
 12. Event History:
     - Event history provides a mechanism to record and retrieve detailed logs of all events and listener executions.
+13. Hooks / lifecycle methods:
+    - Hooks or lifecycle methods allow you to execute custom logic at specific stages of an event’s lifecycle, such as before dispatch, after execution, or on listener completion.
 
 ## installation
 
@@ -115,6 +118,28 @@ And you're ready to create your own EventEmitter instances.
   emitter.emit('throttleEvent');
 ```
 
+#### Advanced Throttling
+
+```typescript
+// Simple throttling (executes on both leading and trailing edges)
+emitter.on('event', listener, {
+  throttle: 1000 // 1 second
+});
+
+// Advanced throttling with edge control
+emitter.on('event', listener, {
+  throttle: {
+    delay: 1000, // 1 second
+    leading: true, // Execute on first call
+    trailing: true // Execute on last call
+  }
+});
+```
+
+- **Leading Edge**: Best for actions that should happen instantly but not too often, like a "fire" button in a game that has a cooldown period.
+- **Trailing Edge**: Ideal for periodically processing a continuous stream of data, such as updating a live data chart every second with the latest value.
+- **Both Edges**: Perfect for responsive UI updates during continuous actions, like immediately indicating a window is being resized (leading) and then rendering the final content once the resizing pauses (trailing).
+
 ### Debouncing
 
 1. First emit:
@@ -148,6 +173,28 @@ So basically for the given example, the listener will be executed after 300 mill
   emitter.emit('debounceEvent');
   emitter.emit('debounceEvent');
 ```
+
+#### Advanced Debouncing
+
+```typescript
+// Simple debouncing (executes only on trailing edge)
+emitter.on('event', listener, {
+  debounce: 1000 // 1 second
+});
+
+// Advanced debouncing with edge control
+emitter.on('event', listener, {
+  debounce: {
+    delay: 1000, // 1 second
+    leading: false, // Don't execute on first call
+    trailing: true // Execute on last call
+  }
+});
+```
+
+- **Leading Edge**: Useful for preventing accidental double-submissions, like clicking a "Purchase" button once and ignoring further frantic clicks.
+- **Trailing Edge**: Perfect for auto-saving a form or running a search query only after the user has finished typing for a moment.
+- **Both Edges**: Ideal for providing instant feedback and a final action, such as immediately showing a "saving..." spinner on the first keypress (leading) and then confirming "Saved!" after the user stops typing (trailing).
 
 ### Wildcard
 
@@ -575,6 +622,50 @@ const { globalEventBus } = require('typescript-event-emitter');
     //     args: []
     //   }
     // ]
+```
+
+### Hooks / lifecycle methods
+
+Lifecycle hooks allow you to register functions that are triggered before or after an event is emitted, regardless of which event it is. This is incredibly useful for cross-cutting concerns like logging, analytics, or transaction management.
+
+- **`before(hook)`**: Registers a function to run _before_ any listeners for an event are executed.
+- **`after(hook)`**: Registers a function to run _after_ all listeners for an event have completed.
+
+```typescript
+const emitter = new EventEmitter();
+const executionOrder = [];
+
+// Register a "before" hook for logging
+emitter.before((eventName, ...args) => {
+  console.log(`About to emit '${eventName}' with args:`, args);
+  executionOrder.push('before');
+});
+
+// Register an "after" hook for metrics
+emitter.after(eventName => {
+  console.log(`Finished emitting '${eventName}'.`);
+  executionOrder.push('after');
+});
+
+// Register a standard listener
+emitter.on('user:created', user => {
+  console.log('User created:', user);
+  executionOrder.push('listener');
+});
+
+await emitter.emit('user:created', { id: 1, name: 'John Doe' });
+
+// Output will be logged in this order:
+// 1. "About to emit 'user:created' with args: [ { id: 1, name: 'John Doe' } ]"
+// 2. "User created: { id: 1, name: 'John Doe' }"
+// 3. "Finished emitting 'user:created'."
+
+console.log(executionOrder); // Will be ['before', 'listener', 'after']
+
+// You can also remove hooks
+const myHook = () => console.log('This will be removed.');
+emitter.before(myHook);
+emitter.removeBefore(myHook); // The hook is no longer active
 ```
 
 ## Tests

@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { defaultWildCard } from './Constants';
 import { EventEmitter } from './EventEmitter';
-import { EventHistory, EventInfo, EventNamespace, Option } from './Interfaces';
+import { EventHistory, EventInfo, EventNamespace, Hook, Hooks, Option } from './Interfaces';
 import { AsyncListener, EventFilter, Listener, ThrottledListener } from './Types';
 import { findEventInfo, getPrioritizedValue, insertSorted, isObjectEmpty, parseEvent } from './Utils';
 
@@ -19,6 +19,7 @@ export class ListenerManager {
     args: unknown[];
   }> = [];
   private eventHistory: Array<EventHistory> = [];
+  private hooks: Hooks = { beforeEmit: [], afterEmit: [] };
 
   /**
    * Retrieves the event history based on a specific event name.
@@ -56,10 +57,14 @@ export class ListenerManager {
    *                  This can be either a `Listener` (synchronous function) or `AsyncListener` (asynchronous function).
    * @param option - An object containing various configuration options for the listener.
    * @param option.filter - Optional. A filter function to determine whether the listener should be executed.
-   * @param option.throttle - Optional. Time in milliseconds to throttle the execution of the listener.
-   *                          If specified, the listener will only be called once within the given time window.
-   * @param option.debounce - Optional. Time in milliseconds to debounce the execution of the listener.
+   * @param option.throttle - Optional. Throttle configuration. Can be a number (delay in ms) or an object with { delay, leading, trailing }.
+   *                          If specified, the listener will only be called at most once within the given time window.
+   *                          - leading: If true, triggers on the leading edge. Default: true.
+   *                          - trailing: If true, triggers on the trailing edge. Default: true.
+   * @param option.debounce - Optional. Debounce configuration. Can be a number (delay in ms) or an object with { delay, leading, trailing }.
    *                          If specified, the listener will be delayed and only called after the delay has passed since the last event.
+   *                          - leading: If true, triggers on the leading edge. Default: false.
+   *                          - trailing: If true, triggers on the trailing edge. Default: true.
    * @param option.priority - Optional. Priority of the listener. Higher values execute first. Default is 0.
    * @param option.concurrency - Optional. Maximum number of listeners executed in parallel. Default is unlimited.
    * @param option.separator - Optional. Custom separator used for parsing the event. Default is the global separator.
@@ -71,12 +76,34 @@ export class ListenerManager {
 
     const [namespace, eventName] = parseEvent(event, usedSeparator);
 
-    const throttledListener =
-      throttle !== undefined
-        ? this.throttle(listener, throttle, eventName)
-        : debounce !== undefined
-          ? this.debounce(listener, debounce, eventName)
-          : listener;
+    let throttledListener: Listener | AsyncListener;
+    if (throttle !== undefined) {
+      let delay: number,
+        leading = true,
+        trailing = true;
+      if (typeof throttle === 'number') {
+        delay = throttle;
+      } else {
+        delay = throttle.delay;
+        if (typeof throttle.leading === 'boolean') leading = throttle.leading;
+        if (typeof throttle.trailing === 'boolean') trailing = throttle.trailing;
+      }
+      throttledListener = this.throttle(listener, delay, leading, trailing);
+    } else if (debounce !== undefined) {
+      let delay: number,
+        leading = false,
+        trailing = true;
+      if (typeof debounce === 'number') {
+        delay = debounce;
+      } else {
+        delay = debounce.delay;
+        if (typeof debounce.leading === 'boolean') leading = debounce.leading;
+        if (typeof debounce.trailing === 'boolean') trailing = debounce.trailing;
+      }
+      throttledListener = this.debounce(listener, delay, leading, trailing);
+    } else {
+      throttledListener = listener;
+    }
 
     const listenerObject = {
       listener: throttledListener,
@@ -118,6 +145,10 @@ export class ListenerManager {
    * This method processes and executes listeners for specific namespaces and wildcard combinations.
    */
   async executeListeners(_emitter: EventEmitter, event: string, args: unknown[]): Promise<void> {
+    for (const hook of this.hooks.beforeEmit) {
+      await hook(event, ...args);
+    }
+
     const separator = findEventInfo(event, this.eventNamespaces);
 
     const [namespace, eventName] = parseEvent(event, separator);
@@ -131,6 +162,10 @@ export class ListenerManager {
         this.executeSpecificListeners(defaultWildCard, eventName, eventName, separator, args),
         this.executeSpecificListeners(namespace, eventName, eventName, separator, args)
       ]);
+    }
+
+    for (const hook of this.hooks.afterEmit) {
+      await hook(event, ...args);
     }
   }
 
@@ -299,7 +334,6 @@ export class ListenerManager {
         }
 
         this.recordEventHistory(eventName, id, args);
-
       } catch (error) {
         this.handleListenerError(eventName, error as Error);
       } finally {
@@ -345,38 +379,111 @@ export class ListenerManager {
 
   /**
    * Creates a throttled version of the given listener function, ensuring it is called at most once within a specified time interval.
+   * Supports leading/trailing edge control.
    * @param fn - The listener function to be throttled.
    * @param delay - The time delay (in milliseconds) between allowed invocations of the throttled function.
-   * @param eventName - The name of the event associated with the listener.
+   * @param leading - If true, triggers on the leading edge.
+   * @param trailing - If true, triggers on the trailing edge.
    * @returns A throttled listener function.
    */
-  private throttle(fn: Listener | AsyncListener, delay: number, eventName: string): ThrottledListener | AsyncListener {
+  private throttle(
+    fn: Listener | AsyncListener,
+    delay: number,
+    leading = true,
+    trailing = true
+  ): ThrottledListener | AsyncListener {
+    let timeout: NodeJS.Timeout | null = null;
     let lastCallTime = 0;
+    let lastArgs: unknown[] | null = null;
+    let lastEventName: string | null = null;
 
-    return async function (...args: unknown[]): Promise<void> {
+    const trailingCall = async () => {
+      timeout = null;
+      lastCallTime = Date.now();
+      if (trailing && lastEventName && lastArgs) {
+        await (fn as AsyncListener)(lastEventName, ...lastArgs);
+      }
+    };
+
+    return async (eventName: string, ...args: unknown[]): Promise<void> => {
       const now = Date.now();
-      if (now - lastCallTime >= delay) {
+      lastArgs = args;
+      lastEventName = eventName;
+
+      const callNow = leading && now - lastCallTime >= delay;
+
+      if (callNow) {
+        if (timeout) {
+          clearTimeout(timeout);
+          timeout = null;
+        }
         lastCallTime = now;
         await (fn as AsyncListener)(eventName, ...args);
+      } else if (!timeout && trailing) {
+        const remaining = delay - (now - lastCallTime);
+        timeout = setTimeout(trailingCall, remaining > 0 ? remaining : 0);
       }
     };
   }
 
   /**
    * Creates a debounced version of the given listener function, ensuring it is called after a specified delay with no new invocations.
+   * Supports leading/trailing edge control.
    * @param fn - The listener function to be debounced.
    * @param delay - The time delay (in milliseconds) before the debounced function is called after the last invocation.
-   * @param eventName - The name of the event associated with the listener.
+   * @param leading - If true, triggers on the leading edge.
+   * @param trailing - If true, triggers on the trailing edge.
    * @returns A debounced listener function.
    */
-  private debounce(fn: Listener | AsyncListener, delay: number, eventName: string): ThrottledListener | AsyncListener {
-    let timeout: NodeJS.Timeout;
+  private debounce(
+    fn: Listener | AsyncListener,
+    delay: number,
+    leading = false,
+    trailing = true
+  ): ThrottledListener | AsyncListener {
+    let timeout: NodeJS.Timeout | null = null;
+    let lastArgs: unknown[] | null = null;
+    let lastEventName: string | null = null;
+    let called = false;
 
-    return async function (...args: unknown[]): Promise<void> {
-      clearTimeout(timeout);
-      timeout = setTimeout(async () => {
+    return async (eventName: string, ...args: unknown[]): Promise<void> => {
+      if (timeout) clearTimeout(timeout);
+      lastArgs = args;
+      lastEventName = eventName;
+      if (leading && !called) {
+        called = true;
         await (fn as AsyncListener)(eventName, ...args);
+      }
+      timeout = setTimeout(async () => {
+        called = false;
+        if (trailing) {
+          if (lastEventName) await (fn as AsyncListener)(lastEventName, ...(lastArgs || []));
+        }
+        lastArgs = null;
+        lastEventName = null;
       }, delay);
     };
+  }
+
+  /**
+   * Adds a lifecycle hook to be executed before or after an event is emitted.
+   * @param type - The type of hook, either 'beforeEmit' or 'afterEmit'.
+   * @param hook - The function to be executed.
+   */
+  addHook(type: keyof Hooks, hook: Hook): void {
+    this.hooks[type].push(hook);
+  }
+
+  /**
+   * Removes a previously added lifecycle hook.
+   * @param type - The type of hook to remove.
+   * @param hook - The hook function to remove.
+   */
+  removeHook(type: keyof Hooks, hook: Hook): void {
+    const hooksOfType = this.hooks[type];
+    const index = hooksOfType.indexOf(hook);
+    if (index > -1) {
+      hooksOfType.splice(index, 1);
+    }
   }
 }

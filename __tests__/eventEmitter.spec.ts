@@ -9,6 +9,8 @@ interface Message {
   sender: string;
 }
 
+export const wait = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+
 describe('EventEmitter', function () {
   it('should add a listener and emit an event', function (done) {
     const testData = 'Test data';
@@ -242,56 +244,6 @@ describe('EventEmitter', function () {
 
     assert.isTrue(firstListenerInvoked);
     assert.isTrue(secondListenerInvoked);
-  });
-
-  it('should debounce the listener', async function () {
-    const execute = async (): Promise<void> => {
-      await Promise.all([emitter.emit('debounceEvent'), emitter.emit('debounceEvent'), emitter.emit('debounceEvent')]);
-
-      await new Promise(resolve => setTimeout(resolve, 200));
-    };
-
-    const emitter = new EventEmitter();
-
-    let callCount = 0;
-
-    emitter.on(
-      'debounceEvent',
-      () => {
-        callCount++;
-      },
-      { debounce: 100 }
-    );
-
-    await execute();
-
-    assert.strictEqual(callCount, 1);
-
-    await execute();
-
-    assert.strictEqual(callCount, 2);
-  });
-
-  it('should throttle the listener', async function () {
-    const emitter = new EventEmitter();
-
-    let callCount = 0;
-
-    emitter.on(
-      'throttleEvent',
-      () => {
-        callCount++;
-      },
-      { throttle: 100 }
-    );
-
-    emitter.emit('throttleEvent');
-    emitter.emit('throttleEvent');
-    emitter.emit('throttleEvent');
-
-    await new Promise(resolve => setTimeout(resolve, 200));
-
-    assert.strictEqual(callCount, 1);
   });
 
   it('should filter events based on the provided filter function', async function () {
@@ -602,5 +554,325 @@ describe('EventEmitter', function () {
 
     assert.equal(history.length, 1, 'History should have two events');
     assert.equal(history[0].event, testEvent2, 'Event name should match');
+  });
+
+  it('should debounce the listener', async function () {
+    const emitter = new EventEmitter();
+    const results: number[] = [];
+    const listener = (_event: string, value: number) => {
+      results.push(value);
+    };
+
+    emitter.on('test', listener, {
+      debounce: 100
+    });
+
+    emitter.emit('test', 1);
+    assert.deepEqual(results, []);
+
+    await wait(150);
+    assert.deepEqual(results, [1]);
+  });
+
+  it('should throttle the listener', async function () {
+    const emitter = new EventEmitter();
+
+    const results: number[] = [];
+    const listener = (_event: string, value: number) => {
+      results.push(value);
+    };
+
+    emitter.on('test', listener, {
+      throttle: 100
+    });
+
+    emitter.emit('test', 1);
+    assert.deepEqual(results, [1]);
+
+    emitter.emit('test', 2);
+    assert.deepEqual(results, [1]);
+
+    await wait(150);
+    assert.deepEqual(results, [1, 2]);
+  });
+
+  it('should execute on leading edge only when trailing is false (throttle)', async () => {
+    const emitter = new EventEmitter();
+
+    const results: number[] = [];
+    const listener = (_event: string, value: number) => {
+      results.push(value);
+    };
+
+    emitter.on('test', listener, {
+      throttle: { delay: 100, leading: true, trailing: false }
+    });
+
+    //First call should execute immediately (leading edge)
+    emitter.emit('test', 1);
+    assert.deepEqual(results, [1]);
+
+    // These calls should be throttled
+    emitter.emit('test', 2);
+    emitter.emit('test', 3);
+    assert.deepEqual(results, [1]);
+
+    // Wait for throttle delay
+    await wait(150);
+
+    // Next call should execute immediately
+    emitter.emit('test', 4);
+    assert.deepEqual(results, [1, 4]);
+  });
+
+  it('should execute on trailing edge only when leading is false (throttle)', async () => {
+    const emitter = new EventEmitter();
+
+    const results: number[] = [];
+    const listener = (_event: string, value: number) => {
+      results.push(value);
+    };
+
+    emitter.on('test', listener, {
+      throttle: { delay: 100, leading: false, trailing: true }
+    });
+
+    // First call should not execute immediately
+    emitter.emit('test', 1);
+    assert.deepEqual(results, []);
+
+    // Wait for throttle delay
+    await wait(150);
+    assert.deepEqual(results, [1]);
+
+    // Next call should not execute immediately
+    emitter.emit('test', 2);
+    assert.deepEqual(results, [1]);
+
+    // Wait for throttle delay
+    await wait(150);
+    assert.deepEqual(results, [1, 2]);
+  });
+
+  it('should execute on both leading and trailing edges by default (throttle)', async () => {
+    const emitter = new EventEmitter();
+
+    const results: number[] = [];
+    const listener = (_event: string, value: number) => {
+      results.push(value);
+    };
+
+    emitter.on('test', listener, {
+      throttle: { delay: 100 }
+    });
+
+    // First call should execute immediately (leading edge)
+    emitter.emit('test', 1);
+    assert.deepEqual(results, [1]);
+
+    // These calls should be throttled
+    emitter.emit('test', 2);
+    emitter.emit('test', 3);
+    assert.deepEqual(results, [1]);
+
+    // Wait for throttle delay
+    await wait(150);
+    assert.deepEqual(results, [1, 3]);
+  });
+
+  it('should execute on leading edge only when trailing is false (debounce)', async () => {
+    const emitter = new EventEmitter();
+
+    const results: number[] = [];
+    const listener = (_event: string, value: number) => {
+      results.push(value);
+    };
+
+    emitter.on('test', listener, {
+      debounce: { delay: 100, leading: true, trailing: false }
+    });
+
+    // First call should execute immediately (leading edge)
+    emitter.emit('test', 1);
+    assert.deepEqual(results, [1]);
+
+    // These calls should be debounced
+    emitter.emit('test', 2);
+    emitter.emit('test', 3);
+    assert.deepEqual(results, [1]);
+
+    // Wait for debounce delay
+    await wait(150);
+    assert.deepEqual(results, [1]);
+
+    // Next call should execute immediately
+    emitter.emit('test', 4);
+    assert.deepEqual(results, [1, 4]);
+  });
+
+  it('should execute on trailing edge only when leading is false (debounce)', async () => {
+    const emitter = new EventEmitter();
+
+    const results: number[] = [];
+    const listener = (_event: string, value: number) => {
+      results.push(value);
+    };
+
+    emitter.on('test', listener, {
+      debounce: { delay: 100, leading: false, trailing: true }
+    });
+
+    // First call should not execute immediately
+    emitter.emit('test', 1);
+    assert.deepEqual(results, []);
+
+    // Wait for debounce delay
+    await wait(150);
+    assert.deepEqual(results, [1]);
+
+    // Next call should not execute immediately
+    emitter.emit('test', 2);
+    assert.deepEqual(results, [1]);
+
+    // Wait for debounce delay
+    await wait(150);
+    assert.deepEqual(results, [1, 2]);
+  });
+
+  it('should execute on both leading and trailing edges when both are true (debounce)', async () => {
+    const emitter = new EventEmitter();
+
+    const results: number[] = [];
+    const listener = (_event: string, value: number) => {
+      results.push(value);
+    };
+
+    emitter.on('test', listener, {
+      debounce: { delay: 100, leading: true, trailing: true }
+    });
+
+    // First call should execute immediately (leading edge)
+    emitter.emit('test', 1);
+    assert.deepEqual(results, [1]);
+
+    // These calls should be debounced
+    emitter.emit('test', 2);
+    emitter.emit('test', 3);
+    assert.deepEqual(results, [1]);
+
+    // Wait for debounce delay
+    await wait(150);
+    assert.deepEqual(results, [1, 3]);
+  });
+});
+
+describe('EventEmitter Hooks', () => {
+  it('should call "before" and "after" hooks around an event emission', async () => {
+    const emitter = new EventEmitter();
+    const executionOrder: string[] = [];
+
+    const beforeHook = async (eventName: string, ...args: unknown[]) => {
+      assert.strictEqual(eventName, 'testEvent');
+      assert.strictEqual(args[0], 1);
+      executionOrder.push('before');
+    };
+
+    const listener = (eventName: string, ...args: unknown[]) => {
+      assert.strictEqual(eventName, 'testEvent');
+      assert.strictEqual(args[0], 1);
+      executionOrder.push('listener');
+    };
+
+    const afterHook = async (eventName: string, ...args: unknown[]) => {
+      assert.strictEqual(eventName, 'testEvent');
+      assert.strictEqual(args[0], 1);
+      executionOrder.push('after');
+    };
+
+    emitter.before(beforeHook);
+    emitter.on('testEvent', listener);
+    emitter.after(afterHook);
+
+    await emitter.emit('testEvent', 1);
+
+    assert.deepEqual(executionOrder, ['before', 'listener', 'after']);
+  });
+
+  it('should handle multiple hooks of the same type', async () => {
+    const emitter = new EventEmitter();
+    let beforeCount = 0;
+    let afterCount = 0;
+
+    emitter.before(() => {
+      beforeCount++;
+    });
+    emitter.before(() => {
+      beforeCount++;
+    });
+    emitter.after(() => {
+      afterCount++;
+    });
+    emitter.after(() => {
+      afterCount++;
+    });
+
+    await emitter.emit('testEvent');
+
+    assert.strictEqual(beforeCount, 2);
+    assert.strictEqual(afterCount, 2);
+  });
+
+  it('should call hooks even if no listeners exist for the event', async () => {
+    const emitter = new EventEmitter();
+    const executionOrder: string[] = [];
+
+    emitter.before(() => {
+      executionOrder.push('before');
+    });
+    emitter.after(() => {
+      executionOrder.push('after');
+    });
+
+    await emitter.emit('unusedEvent');
+
+    assert.deepEqual(executionOrder, ['before', 'after']);
+  });
+
+  it('should allow removing hooks', async () => {
+    const emitter = new EventEmitter();
+    let beforeCalled = false;
+    let afterCalled = false;
+
+    const beforeHook = () => {
+      beforeCalled = true;
+    };
+    const afterHook = () => {
+      afterCalled = true;
+    };
+
+    emitter.before(beforeHook);
+    emitter.after(afterHook);
+
+    emitter.removeBefore(beforeHook);
+    emitter.removeAfter(afterHook);
+
+    await emitter.emit('testEvent');
+
+    assert.strictEqual(beforeCalled, false);
+    assert.strictEqual(afterCalled, false);
+  });
+
+  it('should pass correct arguments to hooks', async () => {
+    const emitter = new EventEmitter();
+    let receivedArgs: unknown[] = [];
+
+    const beforeHook = (_eventName: string, ...args: unknown[]) => {
+      receivedArgs = args;
+    };
+
+    emitter.before(beforeHook);
+    await emitter.emit('testEvent', 1, 'hello', { a: 2 });
+
+    assert.deepEqual(receivedArgs, [1, 'hello', { a: 2 }]);
   });
 });
