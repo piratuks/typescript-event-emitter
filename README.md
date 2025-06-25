@@ -10,6 +10,7 @@ Versatile and feature-rich TypeScript library for event management, providing a 
 
 1.  Throttling and Debouncing:
     - flexibility for handling events in scenarios where rapid or frequent triggering needs to be controlled.
+    - advanced Throttling and Debouncing which supports options with leading/trailing edge control. This allows for fine-grained control over when event listeners are executed.
 2.  Wildcard Listeners:
     - supporting wildcard listeners with the '\*' namespace, allowing global event handling.
 3.  Namespace Support:
@@ -115,6 +116,28 @@ And you're ready to create your own EventEmitter instances.
   emitter.emit('throttleEvent');
 ```
 
+#### Advanced Throttling
+
+```typescript
+// Simple throttling (executes on both leading and trailing edges)
+emitter.on('event', listener, {
+  throttle: 1000 // 1 second
+});
+
+// Advanced throttling with edge control
+emitter.on('event', listener, {
+  throttle: {
+    delay: 1000, // 1 second
+    leading: true, // Execute on first call
+    trailing: true // Execute on last call
+  }
+});
+```
+
+- **Leading Edge**: Best for actions that should happen instantly but not too often, like a "fire" button in a game that has a cooldown period.
+- **Trailing Edge**: Ideal for periodically processing a continuous stream of data, such as updating a live data chart every second with the latest value.
+- **Both Edges**: Perfect for responsive UI updates during continuous actions, like immediately indicating a window is being resized (leading) and then rendering the final content once the resizing pauses (trailing).
+
 ### Debouncing
 
 1. First emit:
@@ -148,6 +171,28 @@ So basically for the given example, the listener will be executed after 300 mill
   emitter.emit('debounceEvent');
   emitter.emit('debounceEvent');
 ```
+
+#### Advanced Debouncing
+
+```typescript
+// Simple debouncing (executes only on trailing edge)
+emitter.on('event', listener, {
+  debounce: 1000 // 1 second
+});
+
+// Advanced debouncing with edge control
+emitter.on('event', listener, {
+  debounce: {
+    delay: 1000, // 1 second
+    leading: false, // Don't execute on first call
+    trailing: true // Execute on last call
+  }
+});
+```
+
+- **Leading Edge**: Useful for preventing accidental double-submissions, like clicking a "Purchase" button once and ignoring further frantic clicks.
+- **Trailing Edge**: Perfect for auto-saving a form or running a search query only after the user has finished typing for a moment.
+- **Both Edges**: Ideal for providing instant feedback and a final action, such as immediately showing a "saving..." spinner on the first keypress (leading) and then confirming "Saved!" after the user stops typing (trailing).
 
 ### Wildcard
 

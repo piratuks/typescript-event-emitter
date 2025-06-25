@@ -1,5 +1,12 @@
 # typescript-event-emitter
 
+## 2025-06-25, version 2.0.4
+
+Introduction of new features
+
+1. Advanced Throttling and Debouncing
+2. Introduced hooks / lifecycle methods that are triggered before or after an event is emitted
+
 ## 2024-12-11, version 2.0.3
 
 Introduction of new features

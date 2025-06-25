@@ -16,10 +16,22 @@ export interface EventHistory {
   args: unknown[];
 }
 
+export interface ThrottleDebounceOption {
+  delay: number;
+  leading?: boolean;
+  trailing?: boolean;
+}
+
 export interface Option {
   filter?: EventFilter;
-  throttle?: number;
-  debounce?: number;
+  /**
+   * Throttle configuration. Can be a number (delay in ms) or an object with delay, leading, and trailing.
+   */
+  throttle?: number | ThrottleDebounceOption;
+  /**
+   * Debounce configuration. Can be a number (delay in ms) or an object with delay, leading, and trailing.
+   */
+  debounce?: number | ThrottleDebounceOption;
   priority?: number;
   separator?: string;
   concurrency?: number;
