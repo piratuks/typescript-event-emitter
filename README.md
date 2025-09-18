@@ -2,9 +2,12 @@
 
 Versatile and feature-rich TypeScript library for event management, providing a solid foundation for building event-driven applications in TypeScript.
 
-| \*  | Version   | Supported          |
-| --- | --------- | ------------------ |
-| npm | >= 7.24.0 | :white_check_mark: |
+| \*      | Version   | Supported          |
+| ------- | --------- | ------------------ |
+| npm     | >= 7.24.0 | :white_check_mark: |
+| angular | >= 12     | :white_check_mark: |
+| react   | >= 17     | :white_check_mark: |
+| vue     | >= 3      | :white_check_mark: |
 
 # main features
 
