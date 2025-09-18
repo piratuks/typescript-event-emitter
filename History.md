@@ -1,5 +1,11 @@
 # typescript-event-emitter
 
+## 2025-09-18, version 2.1.0
+
+Introduction of new features
+
+Integrations: - Seamless integration hooks and composables are provided for Angular, React, and Vue, allowing you to easily subscribe to events, emit events, and access the full EventEmitter API in your favorite frontend framework. - React: Supports React 17 and above (including React 18+). The integration uses hooks and is compatible with modern React functional components. - Angular: Supports Angular 12 and above. The integration uses Angular services and RxJS, matching the structure of Angular 12+ projects. - Vue: Supports Vue 3 and above. The integration uses the Composition API (composables), which is standard in Vue 3+.
+
 ## 2025-06-25, version 2.0.4
 
 Introduction of new features

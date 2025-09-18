@@ -36,6 +36,11 @@ Versatile and feature-rich TypeScript library for event management, providing a 
     - Event history provides a mechanism to record and retrieve detailed logs of all events and listener executions.
 13. Hooks / lifecycle methods:
     - Hooks or lifecycle methods allow you to execute custom logic at specific stages of an event’s lifecycle, such as before dispatch, after execution, or on listener completion.
+14. Integrations:
+    - Seamless integration hooks and composables are provided for Angular, React, and Vue, allowing you to easily subscribe to events, emit events, and access the full EventEmitter API in your favorite frontend framework.
+    - React: Supports React 17 and above (including React 18+). The integration uses hooks and is compatible with modern React functional components.
+    - Angular: Supports Angular 12 and above. The integration uses Angular services and RxJS, matching the structure of Angular 12+ projects.
+    - Vue: Supports Vue 3 and above. The integration uses the Composition API (composables), which is standard in Vue 3+.
 
 ## installation
 
@@ -666,6 +671,173 @@ console.log(executionOrder); // Will be ['before', 'listener', 'after']
 const myHook = () => console.log('This will be removed.');
 emitter.before(myHook);
 emitter.removeBefore(myHook); // The hook is no longer active
+```
+
+## Integrations
+
+### Angular
+
+1. Inject the service into your component or service:
+
+```typescript
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { EventEmitterService } from 'typescript-event-emitter/angular';
+import { Subscription } from 'rxjs';
+
+@Component({
+  selector: 'app-demo',
+  template: `...`
+})
+export class DemoComponent implements OnInit, OnDestroy {
+  private subscription: Subscription;
+
+  constructor(private eventEmitterService: EventEmitterService) {}
+
+  ngOnInit() {
+    this.subscription = this.eventEmitterService.fromEvent<string>('myEvent').subscribe(
+      payload => {
+        console.log('Received:', payload);
+      },
+      { throttle: 500 }
+    );
+  }
+
+  ngOnDestroy() {
+    this.subscription.unsubscribe();
+  }
+}
+```
+
+2.To emit an event from anywhere you have access to the EventEmitter instance:
+
+```typescript
+this.eventEmitterService['emitter'].emit('myEvent', 'Hello from Angular!');
+// Or, if using the global event bus
+
+this.globalEventBus.emit('globalEvent', 'data');
+```
+
+3. Accessing the Full EventEmitter API in Angular can be via instance
+
+```typescript
+this.eventEmitterService.instance.getAllEventHistory();
+```
+
+### React
+
+1. Use the hook in your component to subscribe to events:
+
+```typescript
+import React, { useEffect } from 'react';
+import { useEventEmitter, EventEmitter } from 'typescript-event-emitter/react';
+
+// Create or import your EventEmitter instance
+const emitter = new EventEmitter();
+
+function DemoComponent() {
+  // Subscribe to an event with options (e.g., throttle)
+  useEventEmitter<string>(
+    emitter,
+    'myEvent',
+    (payload) => {
+      console.log('Received:', payload);
+    },
+    { throttle: 500 }
+  );
+
+  useEffect(() => {
+    // Emit an event
+    emitter.emit('myEvent', 'Hello from React!');
+  }, []);
+
+  return <div>Check the console for events!</div>;
+}
+```
+
+2. Accessing the Full EventEmitter API in React
+
+```typescript
+useEffect(() => {
+  emitter.setGlobalOptions({ separator: ':' });
+  const history = emitter.getAllEventHistory();
+  console.log(history);
+}, []);
+```
+
+3.Using the Global Event Bus in React
+
+```typescript
+import { useGlobalEventBus, globalEventBus } from 'typescript-event-emitter/react';
+
+function GlobalDemoComponent() {
+  useGlobalEventBus<string>(
+    'globalEvent',
+    (payload) => {
+      console.log('Global event received:', payload);
+    },
+    { debounce: 300 }
+  );
+
+  useEffect(() => {
+    globalEventBus.emit('globalEvent', 'Hello from the global bus!');
+  }, []);
+
+  return <div>Check the console for global events!</div>;
+}
+```
+
+### Vue
+
+1. Use the composable in your component to subscribe to events:
+
+```typescript
+<script setup lang="ts">
+import { useEventEmitter, EventEmitter } from 'typescript-event-emitter/vue';
+
+// Create or import your EventEmitter instance
+const emitter = new EventEmitter();
+
+// Subscribe to an event with options (e.g., throttle)
+useEventEmitter<string>(
+  emitter,
+  'myEvent',
+  (payload) => {
+    console.log('Received:', payload);
+  },
+  { throttle: 500 }
+);
+
+// To emit an event
+emitter.emit('myEvent', 'Hello from Vue!');
+</script>
+```
+
+2. Accessing the Full EventEmitter API in Vue
+
+```typescript
+emitter.setGlobalOptions({ separator: ':' });
+const history = emitter.getAllEventHistory();
+console.log(history);
+```
+
+3. Using the Global Event Bus in Vue
+
+```typescript
+<script setup lang="ts">
+import { useGlobalEventBus, globalEventBus } from 'typescript-event-emitter/vue';
+
+// Subscribe to a global event
+useGlobalEventBus<string>(
+  'globalEvent',
+  (payload) => {
+    console.log('Global event received:', payload);
+  },
+  { debounce: 300 }
+);
+
+// Emit a global event
+globalEventBus.emit('globalEvent', 'Hello from the global bus!');
+</script>
 ```
 
 ## Tests
